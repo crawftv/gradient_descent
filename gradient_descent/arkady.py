@@ -1,8 +1,8 @@
-from llama_index import PromptTemplate
-from llama_index.agent import ReActAgent
-from llama_index.llms import Ollama
+from llama_index.core import PromptTemplate
+from llama_index.core.agent import ReActAgent
+from llama_index.llms.ollama import Ollama
 
-llm = Ollama(model="llava", request_timeout=60.00, temperature=0.5)
+llm = Ollama(model="llava", temperature=0.5)
 
 agent = ReActAgent.from_tools(
     tools=[],
@@ -27,7 +27,7 @@ To answer the question, please use the following format.
 ```
 Thought: Use the information provided to determine if  the information available. 
     If you have the information Generate a response in the voice of your character or should use a tool to get an answer.
-     If you do NOT have the info or a tool, Tell the user you "don't know anything about that." 
+     If you do NOT have the info or a tool, Tell the user to find out for "yourself".
      Does this answer solve the user question? if not, start the loop over again.
 Answer: Provide the generated answer to the human.
 ```
