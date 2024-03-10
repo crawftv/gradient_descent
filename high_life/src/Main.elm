@@ -33,8 +33,19 @@ main =
 type alias Model =
     { input : String
     , request : WebData LLMRequest
-    , llmResponse : List LLMResponse
+    , newRow : TableRow
+    , tableRows : TableRows
     }
+
+
+type TableRow
+    = NoInput
+    | HasOnlyInput LLMRequest
+    | HasAllData { request : LLMRequest, response : LLMResponse }
+
+
+type alias TableRows =
+    List TableRow
 
 
 type alias LLMRequest =
@@ -49,7 +60,7 @@ type alias LLMResponse =
 
 init : () -> ( Model, Cmd Msg )
 init _ =
-    ( Model "" NotAsked [], Cmd.none )
+    ( Model "" NotAsked NoInput [], Cmd.none )
 
 
 
@@ -66,15 +77,39 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         SendRequest input ->
-            ( { model | request = Loading }, postLLMRequest input )
+            case model.newRow of
+                HasOnlyInput data ->
+                    let
+                        newRow =
+                            HasOnlyInput data
+
+                        tableRows =
+                            newRow :: model.tableRows
+                    in
+                    ( { input = "", request = Loading, newRow = newRow, tableRows = tableRows }, postLLMRequest input )
+
+                _ ->
+                    ( { model | request = NotAsked }, Cmd.none )
 
         UpdateRequest newRequest ->
-            ( { model | input = newRequest }, Cmd.none )
+            ( { model | input = newRequest, newRow = HasOnlyInput (LLMRequest newRequest) }, Cmd.none )
 
         UseResponseToUpdateModel webDataResponse ->
             case webDataResponse of
                 Success new_llmResponse ->
-                    ( { input = "", request = NotAsked, llmResponse = new_llmResponse :: model.llmResponse }, Cmd.none )
+                    case model.newRow of
+                        HasOnlyInput data ->
+                            let
+                                newRow =
+                                    HasAllData { request = data, response = new_llmResponse }
+
+                                tableRows =
+                                    List.drop 1 model.tableRows
+                            in
+                            ( { input = "", request = NotAsked, newRow = NoInput, tableRows = newRow :: tableRows }, Cmd.none )
+
+                        _ ->
+                            ( model, Cmd.none )
 
                 NotAsked ->
                     ( model, Cmd.none )
@@ -110,22 +145,60 @@ view model =
         ]
 
 
-viewResponses : Model -> Html Msg
-viewResponses model =
-    let
-        x y =
-            tr []
-                [ td [] [ text "input" ]
-                , td [] [ text y.text ]
-                ]
-    in
-    --div []
+viewInputCell : LLMRequest -> Html Msg
+viewInputCell llmRequest =
+    td [] [ text llmRequest.text ]
+
+
+viewResponseCell : LLMResponse -> Html Msg
+viewResponseCell llmRequest =
+    td [] [ text llmRequest.text ]
+
+
+viewTableRow : TableRow -> Maybe (Html Msg)
+viewTableRow tableRow =
+    case tableRow of
+        NoInput ->
+            Nothing
+
+        HasOnlyInput llmRequest ->
+            Just <|
+                tr []
+                    [ viewInputCell llmRequest
+                    , td [] [ text "Loading" ]
+                    ]
+
+        HasAllData data ->
+            Just <|
+                tr []
+                    [ viewInputCell data.request
+                    , viewResponseCell data.response
+                    ]
+
+
+viewTableRows : TableRows -> List (Maybe (Html Msg))
+viewTableRows tableRows =
+    List.map viewTableRow tableRows
+
+
+maybeToList : Maybe a -> List a
+maybeToList m =
+    case m of
+        Nothing ->
+            []
+
+        Just x ->
+            [ x ]
+
+
+viewResponses : TableRows -> Html Msg
+viewResponses tableRows =
     table []
         [ thead []
             [ th [] [ text "Query" ]
             , th [] [ text "Answer" ]
             ]
-        , tbody [] <| List.map x model.llmResponse
+        , tbody [] <| List.concatMap maybeToList (viewTableRows tableRows)
         ]
 
 
@@ -141,16 +214,20 @@ viewQuote model =
                 [ text "Try a search"
                 , input [ onInput UpdateRequest ] []
                 , button [ onClick (SendRequest model.input) ] [ text "Ask!" ]
-                , viewResponses model
+                , viewResponses model.tableRows
                 ]
 
         Failure err ->
-            decodeError model err
+            div []
+                [ decodeError model err
+                , input [ onInput UpdateRequest ] []
+                , button [ onClick (SendRequest model.input) ] [ text "Ask!" ]
+                , viewResponses model.tableRows
+                ]
 
         Loading ->
             div []
-                [ text "Loading..."
-                , viewResponses model
+                [ viewResponses model.tableRows
                 ]
 
         Success _ ->
@@ -158,7 +235,7 @@ viewQuote model =
                 [ text "Try a search"
                 , input [ onInput UpdateRequest ] []
                 , button [ onClick <| SendRequest model.input ] [ text "Ask!" ]
-                , viewResponses model
+                , viewResponses model.tableRows
                 ]
 
 
@@ -190,29 +267,29 @@ decodeError model error =
         Http.BadUrl string ->
             div []
                 [ text string
-                , viewResponses model
+                , viewResponses model.tableRows
                 ]
 
         Http.Timeout ->
             div []
                 [ text "Timeout :("
-                , viewResponses model
+                , viewResponses model.tableRows
                 ]
 
         Http.NetworkError ->
             div []
                 [ text "Network Error :("
-                , viewResponses model
+                , viewResponses model.tableRows
                 ]
 
         Http.BadStatus int ->
             div []
                 [ text ("Bad Status: " ++ String.fromInt int)
-                , viewResponses model
+                , viewResponses model.tableRows
                 ]
 
         Http.BadBody string ->
             div []
                 [ text ("Bad Request Body :(" ++ " " ++ string)
-                , viewResponses model
+                , viewResponses model.tableRows
                 ]
