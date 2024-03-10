@@ -164,3 +164,5 @@ cython_debug/
 *.DS_Store
 *.ipynb_checkpoints/
 *.ipynb
+/high_life/chroma_data/
+/high_life/elm-stuff/
