@@ -5340,29 +5340,54 @@ var $author$project$Main$Model = F4(
 	});
 var $author$project$Main$NoInput = {$: 'NoInput'};
 var $krisajenkins$remotedata$RemoteData$NotAsked = {$: 'NotAsked'};
+var $elm$json$Json$Decode$decodeValue = _Json_run;
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
-var $author$project$Main$init = function (_v0) {
-	return _Utils_Tuple2(
-		A4($author$project$Main$Model, '', $krisajenkins$remotedata$RemoteData$NotAsked, $author$project$Main$NoInput, _List_Nil),
-		$elm$core$Platform$Cmd$none);
+var $elm$json$Json$Decode$list = _Json_decodeList;
+var $author$project$Main$HasAllData = function (a) {
+	return {$: 'HasAllData', a: a};
 };
-var $elm$core$Platform$Sub$batch = _Platform_batch;
-var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
-var $author$project$Main$subscriptions = function (model) {
-	return $elm$core$Platform$Sub$none;
+var $elm$json$Json$Decode$field = _Json_decodeField;
+var $elm$json$Json$Decode$string = _Json_decodeString;
+var $author$project$Main$tableRowDecoder = A3(
+	$elm$json$Json$Decode$map2,
+	F2(
+		function (request, response) {
+			return $author$project$Main$HasAllData(
+				{requestText: request, responseText: response});
+		}),
+	A2($elm$json$Json$Decode$field, 'requestText', $elm$json$Json$Decode$string),
+	A2($elm$json$Json$Decode$field, 'responseText', $elm$json$Json$Decode$string));
+var $author$project$Main$tableRowsDecoder = $elm$json$Json$Decode$list($author$project$Main$tableRowDecoder);
+var $author$project$Main$init = function (flags) {
+	var _v0 = A2($elm$json$Json$Decode$decodeValue, $author$project$Main$tableRowsDecoder, flags);
+	if (_v0.$ === 'Ok') {
+		var tableRows = _v0.a;
+		return _Utils_Tuple2(
+			A4($author$project$Main$Model, '', $krisajenkins$remotedata$RemoteData$NotAsked, $author$project$Main$NoInput, tableRows),
+			$elm$core$Platform$Cmd$none);
+	} else {
+		return _Utils_Tuple2(
+			A4($author$project$Main$Model, '', $krisajenkins$remotedata$RemoteData$NotAsked, $author$project$Main$NoInput, _List_Nil),
+			$elm$core$Platform$Cmd$none);
+	}
+};
+var $author$project$Main$LoadTableRowsFromLocalStorage = function (a) {
+	return {$: 'LoadTableRowsFromLocalStorage', a: a};
+};
+var $elm$json$Json$Decode$value = _Json_decodeValue;
+var $author$project$Main$loadTableRows = _Platform_incomingPort('loadTableRows', $elm$json$Json$Decode$value);
+var $author$project$Main$subscriptions = function (_v0) {
+	return $author$project$Main$loadTableRows($author$project$Main$LoadTableRowsFromLocalStorage);
 };
 var $krisajenkins$remotedata$RemoteData$Failure = function (a) {
 	return {$: 'Failure', a: a};
 };
-var $author$project$Main$HasAllData = function (a) {
-	return {$: 'HasAllData', a: a};
-};
 var $author$project$Main$HasOnlyInput = function (a) {
 	return {$: 'HasOnlyInput', a: a};
 };
-var $author$project$Main$LLMRequest = function (text) {
-	return {text: text};
+var $author$project$Main$LLMRequest = function (requestText) {
+	return {requestText: requestText};
 };
 var $krisajenkins$remotedata$RemoteData$Loading = {$: 'Loading'};
 var $elm$core$List$drop = F2(
@@ -5386,6 +5411,68 @@ var $elm$core$List$drop = F2(
 			}
 		}
 	});
+var $elm$core$List$append = F2(
+	function (xs, ys) {
+		if (!ys.b) {
+			return xs;
+		} else {
+			return A3($elm$core$List$foldr, $elm$core$List$cons, ys, xs);
+		}
+	});
+var $elm$core$List$concat = function (lists) {
+	return A3($elm$core$List$foldr, $elm$core$List$append, _List_Nil, lists);
+};
+var $elm$json$Json$Encode$object = function (pairs) {
+	return _Json_wrap(
+		A3(
+			$elm$core$List$foldl,
+			F2(
+				function (_v0, obj) {
+					var k = _v0.a;
+					var v = _v0.b;
+					return A3(_Json_addField, k, v, obj);
+				}),
+			_Json_emptyObject(_Utils_Tuple0),
+			pairs));
+};
+var $elm$json$Json$Encode$string = _Json_wrap;
+var $author$project$Main$encodeTableRow = function (row) {
+	return $elm$json$Json$Encode$object(
+		_List_fromArray(
+			[
+				_Utils_Tuple2(
+				'requestText',
+				$elm$json$Json$Encode$string(row.requestText)),
+				_Utils_Tuple2(
+				'responseText',
+				$elm$json$Json$Encode$string(row.responseText))
+			]));
+};
+var $author$project$Main$filterRow = function (tableRow) {
+	if (tableRow.$ === 'HasAllData') {
+		var data = tableRow.a;
+		return _List_fromArray(
+			[data]);
+	} else {
+		return _List_Nil;
+	}
+};
+var $elm$json$Json$Encode$list = F2(
+	function (func, entries) {
+		return _Json_wrap(
+			A3(
+				$elm$core$List$foldl,
+				_Json_addEntry(func),
+				_Json_emptyArray(_Utils_Tuple0),
+				entries));
+	});
+var $author$project$Main$encodeTableRows = function (rows) {
+	return A2(
+		$elm$json$Json$Encode$list,
+		$author$project$Main$encodeTableRow,
+		$elm$core$List$concat(
+			A2($elm$core$List$map, $author$project$Main$filterRow, rows)));
+};
 var $author$project$Main$UseResponseToUpdateModel = function (a) {
 	return {$: 'UseResponseToUpdateModel', a: a};
 };
@@ -5402,20 +5489,6 @@ var $ohanhi$remotedata_http$RemoteData$Http$defaultConfig = {
 	timeout: $elm$core$Maybe$Nothing,
 	tracker: $elm$core$Maybe$Nothing
 };
-var $elm$json$Json$Encode$object = function (pairs) {
-	return _Json_wrap(
-		A3(
-			$elm$core$List$foldl,
-			F2(
-				function (_v0, obj) {
-					var k = _v0.a;
-					var v = _v0.b;
-					return A3(_Json_addField, k, v, obj);
-				}),
-			_Json_emptyObject(_Utils_Tuple0),
-			pairs));
-};
-var $elm$json$Json$Encode$string = _Json_wrap;
 var $author$project$Main$encodeRequest = function (input) {
 	return $elm$json$Json$Encode$object(
 		_List_fromArray(
@@ -5425,11 +5498,10 @@ var $author$project$Main$encodeRequest = function (input) {
 				$elm$json$Json$Encode$string(input))
 			]));
 };
-var $author$project$Main$LLMResponse = function (text) {
-	return {text: text};
+var $author$project$Main$LLMResponse = function (responseText) {
+	return {responseText: responseText};
 };
 var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$custom = $elm$json$Json$Decode$map2($elm$core$Basics$apR);
-var $elm$json$Json$Decode$field = _Json_decodeField;
 var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required = F3(
 	function (key, valDecoder, decoder) {
 		return A2(
@@ -5437,7 +5509,6 @@ var $NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required = F3(
 			A2($elm$json$Json$Decode$field, key, valDecoder),
 			decoder);
 	});
-var $elm$json$Json$Decode$string = _Json_decodeString;
 var $author$project$Main$llmResponseDecoder = A3(
 	$NoRedInk$elm_json_decode_pipeline$Json$Decode$Pipeline$required,
 	'text',
@@ -6291,6 +6362,7 @@ var $author$project$Main$postLLMRequest = function (input) {
 		$author$project$Main$llmResponseDecoder,
 		$author$project$Main$encodeRequest(input));
 };
+var $author$project$Main$saveTableRows = _Platform_outgoingPort('saveTableRows', $elm$core$Basics$identity);
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
@@ -6322,7 +6394,7 @@ var $author$project$Main$update = F2(
 								$author$project$Main$LLMRequest(newRequest))
 						}),
 					$elm$core$Platform$Cmd$none);
-			default:
+			case 'UseResponseToUpdateModel':
 				var webDataResponse = msg.a;
 				switch (webDataResponse.$) {
 					case 'Success':
@@ -6330,17 +6402,16 @@ var $author$project$Main$update = F2(
 						var _v3 = model.newRow;
 						if (_v3.$ === 'HasOnlyInput') {
 							var data = _v3.a;
-							var tableRows = A2($elm$core$List$drop, 1, model.tableRows);
 							var newRow = $author$project$Main$HasAllData(
-								{request: data, response: new_llmResponse});
+								{requestText: data.requestText, responseText: new_llmResponse.responseText});
+							var tableRows = A2(
+								$elm$core$List$cons,
+								newRow,
+								A2($elm$core$List$drop, 1, model.tableRows));
 							return _Utils_Tuple2(
-								{
-									input: '',
-									newRow: $author$project$Main$NoInput,
-									request: $krisajenkins$remotedata$RemoteData$NotAsked,
-									tableRows: A2($elm$core$List$cons, newRow, tableRows)
-								},
-								$elm$core$Platform$Cmd$none);
+								{input: '', newRow: $author$project$Main$NoInput, request: $krisajenkins$remotedata$RemoteData$NotAsked, tableRows: tableRows},
+								$author$project$Main$saveTableRows(
+									$author$project$Main$encodeTableRows(tableRows)));
 						} else {
 							return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 						}
@@ -6354,7 +6425,7 @@ var $author$project$Main$update = F2(
 								{
 									input: model.input,
 									newRow: $author$project$Main$HasOnlyInput(
-										{text: model.input}),
+										{requestText: model.input}),
 									request: $krisajenkins$remotedata$RemoteData$Failure(err),
 									tableRows: A2($elm$core$List$drop, 1, model.tableRows)
 								}),
@@ -6366,6 +6437,24 @@ var $author$project$Main$update = F2(
 								{request: $krisajenkins$remotedata$RemoteData$Loading}),
 							$elm$core$Platform$Cmd$none);
 				}
+			case 'LoadTableRowsFromLocalStorage':
+				var json = msg.a;
+				var _v4 = A2($elm$json$Json$Decode$decodeValue, $author$project$Main$tableRowsDecoder, json);
+				if (_v4.$ === 'Ok') {
+					var tableRows = _v4.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{tableRows: tableRows}),
+						$elm$core$Platform$Cmd$none);
+				} else {
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				}
+			default:
+				return _Utils_Tuple2(
+					model,
+					$author$project$Main$saveTableRows(
+						$author$project$Main$encodeTableRows(model.tableRows)));
 		}
 	});
 var $elm$html$Html$div = _VirtualDom_node('div');
@@ -6380,6 +6469,116 @@ var $author$project$Main$UpdateRequest = function (a) {
 	return {$: 'UpdateRequest', a: a};
 };
 var $elm$html$Html$button = _VirtualDom_node('button');
+var $elm$core$List$concatMap = F2(
+	function (f, list) {
+		return $elm$core$List$concat(
+			A2($elm$core$List$map, f, list));
+	});
+var $author$project$Main$maybeToList = function (m) {
+	if (m.$ === 'Nothing') {
+		return _List_Nil;
+	} else {
+		var x = m.a;
+		return _List_fromArray(
+			[x]);
+	}
+};
+var $elm$html$Html$table = _VirtualDom_node('table');
+var $elm$html$Html$tbody = _VirtualDom_node('tbody');
+var $elm$html$Html$th = _VirtualDom_node('th');
+var $elm$html$Html$thead = _VirtualDom_node('thead');
+var $elm$html$Html$td = _VirtualDom_node('td');
+var $elm$html$Html$tr = _VirtualDom_node('tr');
+var $author$project$Main$viewInputCell = function (input) {
+	return A2(
+		$elm$html$Html$td,
+		_List_Nil,
+		_List_fromArray(
+			[
+				$elm$html$Html$text(input)
+			]));
+};
+var $author$project$Main$viewResponseCell = function (responseText) {
+	return A2(
+		$elm$html$Html$td,
+		_List_Nil,
+		_List_fromArray(
+			[
+				$elm$html$Html$text(responseText)
+			]));
+};
+var $author$project$Main$viewTableRow = function (tableRow) {
+	switch (tableRow.$) {
+		case 'NoInput':
+			return $elm$core$Maybe$Nothing;
+		case 'HasOnlyInput':
+			var llmRequest = tableRow.a;
+			return $elm$core$Maybe$Just(
+				A2(
+					$elm$html$Html$tr,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$author$project$Main$viewInputCell(llmRequest.requestText),
+							A2(
+							$elm$html$Html$td,
+							_List_Nil,
+							_List_fromArray(
+								[
+									$elm$html$Html$text('Loading')
+								]))
+						])));
+		default:
+			var data = tableRow.a;
+			return $elm$core$Maybe$Just(
+				A2(
+					$elm$html$Html$tr,
+					_List_Nil,
+					_List_fromArray(
+						[
+							$author$project$Main$viewInputCell(data.requestText),
+							$author$project$Main$viewResponseCell(data.responseText)
+						])));
+	}
+};
+var $author$project$Main$viewTableRows = function (tableRows) {
+	return A2($elm$core$List$map, $author$project$Main$viewTableRow, tableRows);
+};
+var $author$project$Main$viewResponses = function (tableRows) {
+	return A2(
+		$elm$html$Html$table,
+		_List_Nil,
+		_List_fromArray(
+			[
+				A2(
+				$elm$html$Html$thead,
+				_List_Nil,
+				_List_fromArray(
+					[
+						A2(
+						$elm$html$Html$th,
+						_List_Nil,
+						_List_fromArray(
+							[
+								$elm$html$Html$text('Query')
+							])),
+						A2(
+						$elm$html$Html$th,
+						_List_Nil,
+						_List_fromArray(
+							[
+								$elm$html$Html$text('Answer')
+							]))
+					])),
+				A2(
+				$elm$html$Html$tbody,
+				_List_Nil,
+				A2(
+					$elm$core$List$concatMap,
+					$author$project$Main$maybeToList,
+					$author$project$Main$viewTableRows(tableRows)))
+			]));
+};
 var $author$project$Main$decodeError = F2(
 	function (model, error) {
 		switch (error.$) {
@@ -6425,11 +6624,20 @@ var $author$project$Main$decodeError = F2(
 					_List_Nil,
 					_List_fromArray(
 						[
-							$elm$html$Html$text('Bad Request Body :(' + (' ' + string))
+							$elm$html$Html$text('Bad Request Body :(' + (' ' + string)),
+							$author$project$Main$viewResponses(model.tableRows)
 						]));
 		}
 	});
 var $elm$html$Html$input = _VirtualDom_node('input');
+var $elm$html$Html$Attributes$stringProperty = F2(
+	function (key, string) {
+		return A2(
+			_VirtualDom_property,
+			key,
+			$elm$json$Json$Encode$string(string));
+	});
+var $elm$html$Html$Attributes$name = $elm$html$Html$Attributes$stringProperty('name');
 var $elm$virtual_dom$VirtualDom$Normal = function (a) {
 	return {$: 'Normal', a: a};
 };
@@ -6479,128 +6687,7 @@ var $elm$html$Html$Events$onInput = function (tagger) {
 			A2($elm$json$Json$Decode$map, tagger, $elm$html$Html$Events$targetValue)));
 };
 var $elm$core$Debug$toString = _Debug_toString;
-var $elm$core$List$append = F2(
-	function (xs, ys) {
-		if (!ys.b) {
-			return xs;
-		} else {
-			return A3($elm$core$List$foldr, $elm$core$List$cons, ys, xs);
-		}
-	});
-var $elm$core$List$concat = function (lists) {
-	return A3($elm$core$List$foldr, $elm$core$List$append, _List_Nil, lists);
-};
-var $elm$core$List$concatMap = F2(
-	function (f, list) {
-		return $elm$core$List$concat(
-			A2($elm$core$List$map, f, list));
-	});
-var $author$project$Main$maybeToList = function (m) {
-	if (m.$ === 'Nothing') {
-		return _List_Nil;
-	} else {
-		var x = m.a;
-		return _List_fromArray(
-			[x]);
-	}
-};
-var $elm$html$Html$table = _VirtualDom_node('table');
-var $elm$html$Html$tbody = _VirtualDom_node('tbody');
-var $elm$html$Html$th = _VirtualDom_node('th');
-var $elm$html$Html$thead = _VirtualDom_node('thead');
-var $elm$html$Html$td = _VirtualDom_node('td');
-var $elm$html$Html$tr = _VirtualDom_node('tr');
-var $author$project$Main$viewInputCell = function (llmRequest) {
-	return A2(
-		$elm$html$Html$td,
-		_List_Nil,
-		_List_fromArray(
-			[
-				$elm$html$Html$text(llmRequest.text)
-			]));
-};
-var $author$project$Main$viewResponseCell = function (llmRequest) {
-	return A2(
-		$elm$html$Html$td,
-		_List_Nil,
-		_List_fromArray(
-			[
-				$elm$html$Html$text(llmRequest.text)
-			]));
-};
-var $author$project$Main$viewTableRow = function (tableRow) {
-	switch (tableRow.$) {
-		case 'NoInput':
-			return $elm$core$Maybe$Nothing;
-		case 'HasOnlyInput':
-			var llmRequest = tableRow.a;
-			return $elm$core$Maybe$Just(
-				A2(
-					$elm$html$Html$tr,
-					_List_Nil,
-					_List_fromArray(
-						[
-							$author$project$Main$viewInputCell(llmRequest),
-							A2(
-							$elm$html$Html$td,
-							_List_Nil,
-							_List_fromArray(
-								[
-									$elm$html$Html$text('Loading')
-								]))
-						])));
-		default:
-			var data = tableRow.a;
-			return $elm$core$Maybe$Just(
-				A2(
-					$elm$html$Html$tr,
-					_List_Nil,
-					_List_fromArray(
-						[
-							$author$project$Main$viewInputCell(data.request),
-							$author$project$Main$viewResponseCell(data.response)
-						])));
-	}
-};
-var $author$project$Main$viewTableRows = function (tableRows) {
-	return A2($elm$core$List$map, $author$project$Main$viewTableRow, tableRows);
-};
-var $author$project$Main$viewResponses = function (tableRows) {
-	return A2(
-		$elm$html$Html$table,
-		_List_Nil,
-		_List_fromArray(
-			[
-				A2(
-				$elm$html$Html$thead,
-				_List_Nil,
-				_List_fromArray(
-					[
-						A2(
-						$elm$html$Html$th,
-						_List_Nil,
-						_List_fromArray(
-							[
-								$elm$html$Html$text('Query')
-							])),
-						A2(
-						$elm$html$Html$th,
-						_List_Nil,
-						_List_fromArray(
-							[
-								$elm$html$Html$text('Answer')
-							]))
-					])),
-				A2(
-				$elm$html$Html$tbody,
-				_List_Nil,
-				A2(
-					$elm$core$List$concatMap,
-					$author$project$Main$maybeToList,
-					$author$project$Main$viewTableRows(tableRows)))
-			]));
-};
-var $author$project$Main$viewQuote = function (model) {
+var $author$project$Main$viewApp = function (model) {
 	var state = model.request;
 	switch (state.$) {
 		case 'NotAsked':
@@ -6614,7 +6701,8 @@ var $author$project$Main$viewQuote = function (model) {
 						$elm$html$Html$input,
 						_List_fromArray(
 							[
-								$elm$html$Html$Events$onInput($author$project$Main$UpdateRequest)
+								$elm$html$Html$Events$onInput($author$project$Main$UpdateRequest),
+								$elm$html$Html$Attributes$name('query')
 							]),
 						_List_Nil),
 						A2(
@@ -6720,10 +6808,10 @@ var $author$project$Main$view = function (model) {
 								$elm$html$Html$text('Get recommendations on Food, Wine, Travel, and more from trusted sources.')
 							]))
 					])),
-				$author$project$Main$viewQuote(model)
+				$author$project$Main$viewApp(model),
+				$elm$html$Html$text(model.input)
 			]));
 };
 var $author$project$Main$main = $elm$browser$Browser$element(
 	{init: $author$project$Main$init, subscriptions: $author$project$Main$subscriptions, update: $author$project$Main$update, view: $author$project$Main$view});
-_Platform_export({'Main':{'init':$author$project$Main$main(
-	$elm$json$Json$Decode$succeed(_Utils_Tuple0))(0)}});}(this));
+_Platform_export({'Main':{'init':$author$project$Main$main($elm$json$Json$Decode$value)(0)}});}(this));

@@ -167,3 +167,7 @@ cython_debug/
 /high_life/chroma_data/
 /high_life/elm-stuff/
 /high_life/commands.sh
+<<<<<<< HEAD
+/high_life/src/elm.js
+=======
+>>>>>>> main

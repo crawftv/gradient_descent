@@ -138,7 +138,7 @@ def master_query(query_str: str) -> str:
         query_str=query_str,
         docs=answer_content
     )
-    resp = Ollama(model="mistral", request_timeout=500).complete(p)
+    resp = Ollama(model="mistral", temperature=0, request_timeout=500).complete(p)
     return resp.text
 
 
