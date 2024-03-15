@@ -115,7 +115,7 @@ update msg model =
                     ( model, Cmd.none )
 
                 Failure err ->
-                    ( { model | request = Failure err }, Cmd.none )
+                    ( { model | request = Failure err, input = model.input, newRow = HasOnlyInput { text = model.input }, tableRows = List.drop 1 model.tableRows }, Cmd.none )
 
                 Loading ->
                     ( { model | request = Loading }, Cmd.none )
@@ -220,9 +220,10 @@ viewQuote model =
         Failure err ->
             div []
                 [ decodeError model err
-                , input [ onInput UpdateRequest ] []
+                , input [ onInput UpdateRequest ] [ text model.input ]
                 , button [ onClick (SendRequest model.input) ] [ text "Ask!" ]
                 , viewResponses model.tableRows
+                , text (Debug.toString model)
                 ]
 
         Loading ->
@@ -267,29 +268,23 @@ decodeError model error =
         Http.BadUrl string ->
             div []
                 [ text string
-                , viewResponses model.tableRows
                 ]
 
         Http.Timeout ->
             div []
                 [ text "Timeout :("
-                , viewResponses model.tableRows
                 ]
 
         Http.NetworkError ->
             div []
                 [ text "Network Error :("
-                , viewResponses model.tableRows
                 ]
 
         Http.BadStatus int ->
             div []
                 [ text ("Bad Status: " ++ String.fromInt int)
-                , viewResponses model.tableRows
                 ]
 
         Http.BadBody string ->
             div []
-                [ text ("Bad Request Body :(" ++ " " ++ string)
-                , viewResponses model.tableRows
-                ]
+                [ text ("Bad Request Body :(" ++ " " ++ string) ]

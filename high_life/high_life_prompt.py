@@ -102,23 +102,25 @@ def master_query(query_str: str) -> str:
     for nodes in texts.values():
         resp = Settings.llm.complete(
             prompt.format(query_str=query_str,
-                          doc=" ".join([node.get_content(metadata_mode=MetadataMode.ALL) for node in nodes])))
+                          doc=" ".join([node.get_content(metadata_mode=MetadataMode.LLM) for node in nodes])))
         answers.append(resp)
     answers = list(zip(texts.items(), answers))
 
     final_answers: ANSWERS = list(filter(lambda x: filter_answer(x), answers))
 
     p = PromptTemplate("""You are the worlds best Q&A bot, specializing in synthesizing correct answers to questions.
-    You will be given documents that have been proven to answer the user query.
+    You will be given a knowledge base that has been proven to answer the user query.
     You're job is to extract the text that best answers the query and give it to the user.
-    If the documents do not contain a suitable answer, simply respond: "i could not find a suitable answer".
-    Do NOT suggest a solution from your own knowledge.
-    Do NOT include phrases like 'Based on the provided documents, or 'According to the documents'.
-    Make sure to include the url from the metadata for each document in the respected answer.
     -----------------
-    DOCUMENTS: {docs}
+    KNOWLEDGE_BASE: {docs}
     -----------------
     QUERY: {query_str}
+    -----------------
+    <<<RESPONSE INSTRUCTIONS: If the documents do not contain a suitable answer, simply respond: "i could not find a suitable answer".
+    Do NOT suggest a solution from your own knowledge.
+    Do NOT include phrases like 'Based on the provided documents, or 'According to the documents'. or  'based on the documents provided.'
+    DO NOT
+    Make sure to include the url from the metadata for each document in the respected answer.>>>>
     -----------------
     Response: [Put your response here and include your reasoning]
     """)
@@ -136,7 +138,7 @@ def master_query(query_str: str) -> str:
         query_str=query_str,
         docs=answer_content
     )
-    resp = Ollama(model="mistral", temperature=0.1, request_timeout=500).complete(p)
+    resp = Ollama(model="mistral", request_timeout=500).complete(p)
     return resp.text
 
 
@@ -146,8 +148,8 @@ if __name__ == "__main__":
     # query_str = "Can you give me a recommendation for a place to stay in Antartica?"
     v = hyde_vector_retriever.retrieve(query_str)
     texts = search(query_str)
-    # prompt = high_life_prompt.partial_format(context_str=search(query_str))
-    # resp = Settings.llm.complete(prompt.format(query_str=query_str))
+    prompt = high_life_prompt.partial_format(context_str=search(query_str))
+    resp = Settings.llm.complete(prompt.format(query_str=query_str))
     # print(resp)
     # summarizer = get_response_synthesizer(
     #     verbose=True,
