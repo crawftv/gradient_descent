@@ -293,3 +293,13 @@ decodeError model error =
                 [ text ("Bad Request Body :(" ++ " " ++ string)
                 , viewResponses model.tableRows
                 ]
+
+
+
+-- PORTS
+
+
+port sendMessage : String -> Cmd msg
+
+
+port messageReceiver : (String -> msg) -> Sub msg

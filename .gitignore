@@ -166,3 +166,5 @@ cython_debug/
 *.ipynb
 /high_life/chroma_data/
 /high_life/elm-stuff/
+/high_life/commands.sh
+/high_life/src/elm.js
