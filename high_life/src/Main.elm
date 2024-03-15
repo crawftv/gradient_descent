@@ -1,16 +1,23 @@
-module Main exposing (..)
+port module Main exposing (..)
 
 import Browser
 import Html exposing (..)
 import Html.Attributes exposing (style)
 import Html.Events exposing (..)
 import Http
-import Json.Decode as Decode exposing (Decoder, decodeString, float, int, nullable, string)
-import Json.Decode.Pipeline exposing (hardcoded, optional, required)
+import Json.Decode as Decode
+import Json.Decode.Pipeline exposing (required)
 import Json.Encode
 import RemoteData exposing (RemoteData(..), WebData)
 import RemoteData.Http
-import Url.Builder exposing (crossOrigin)
+
+
+type alias Key =
+    String
+
+
+type alias Value =
+    String
 
 
 
@@ -31,17 +38,29 @@ main =
 
 
 type alias Model =
-    { input : String
+    { input : Input
     , request : WebData LLMRequest
     , newRow : TableRow
     , tableRows : TableRows
     }
 
 
+type alias ResponseText =
+    String
+
+
+type alias RequestText =
+    String
+
+
+type alias Input =
+    String
+
+
 type TableRow
     = NoInput
     | HasOnlyInput LLMRequest
-    | HasAllData { request : LLMRequest, response : LLMResponse }
+    | HasAllData FullTableRow
 
 
 type alias TableRows =
@@ -49,21 +68,31 @@ type alias TableRows =
 
 
 type alias LLMRequest =
-    { text : String
+    { requestText : RequestText
     }
 
 
 type alias LLMResponse =
-    { text : String
+    { responseText : ResponseText
     }
 
 
-init : () -> ( Model, Cmd Msg )
-init _ =
-    ( Model "" NotAsked NoInput [], Cmd.none )
+type alias FullTableRow =
+    { requestText : RequestText, responseText : ResponseText }
+
+
+init : Json.Encode.Value -> ( Model, Cmd Msg )
+init flags =
+    case Decode.decodeValue tableRowsDecoder flags of
+        Ok tableRows ->
+            ( Model "" NotAsked NoInput tableRows, Cmd.none )
+
+        Err _ ->
+            ( Model "" NotAsked NoInput [], Cmd.none )
 
 
 
+--
 -- UPDATE
 
 
@@ -71,6 +100,8 @@ type Msg
     = SendRequest String
     | UpdateRequest String
     | UseResponseToUpdateModel (WebData LLMResponse)
+    | LoadTableRowsFromLocalStorage Json.Encode.Value
+    | SaveTableRowsToLocalStorage
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -101,12 +132,14 @@ update msg model =
                         HasOnlyInput data ->
                             let
                                 newRow =
-                                    HasAllData { request = data, response = new_llmResponse }
+                                    HasAllData { requestText = data.requestText, responseText = new_llmResponse.responseText }
 
                                 tableRows =
-                                    List.drop 1 model.tableRows
+                                    newRow :: List.drop 1 model.tableRows
                             in
-                            ( { input = "", request = NotAsked, newRow = NoInput, tableRows = newRow :: tableRows }, Cmd.none )
+                            ( { input = "", request = NotAsked, newRow = NoInput, tableRows = tableRows }
+                            , saveTableRows <| encodeTableRows tableRows
+                            )
 
                         _ ->
                             ( model, Cmd.none )
@@ -115,19 +148,26 @@ update msg model =
                     ( model, Cmd.none )
 
                 Failure err ->
-                    ( { model | request = Failure err }, Cmd.none )
+                    ( { model | request = Failure err, input = model.input, newRow = HasOnlyInput { requestText = model.input }, tableRows = List.drop 1 model.tableRows }, Cmd.none )
 
                 Loading ->
                     ( { model | request = Loading }, Cmd.none )
 
+        LoadTableRowsFromLocalStorage json ->
+            case Decode.decodeValue tableRowsDecoder json of
+                Ok tableRows ->
+                    ( { model | tableRows = tableRows }, Cmd.none )
 
+                Err _ ->
+                    ( model, Cmd.none )
 
--- SUBSCRIPTIONS
+        SaveTableRowsToLocalStorage ->
+            ( model, saveTableRows <| encodeTableRows model.tableRows )
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
-    Sub.none
+subscriptions _ =
+    loadTableRows LoadTableRowsFromLocalStorage
 
 
 
@@ -141,18 +181,19 @@ view model =
             [ text "Recommender"
             , h3 [] [ text "Get recommendations on Food, Wine, Travel, and more from trusted sources." ]
             ]
-        , viewQuote model
+        , viewApp model
+        , text model.input
         ]
 
 
-viewInputCell : LLMRequest -> Html Msg
-viewInputCell llmRequest =
-    td [] [ text llmRequest.text ]
+viewInputCell : Input -> Html Msg
+viewInputCell input =
+    td [] [ text input ]
 
 
-viewResponseCell : LLMResponse -> Html Msg
-viewResponseCell llmRequest =
-    td [] [ text llmRequest.text ]
+viewResponseCell : ResponseText -> Html Msg
+viewResponseCell responseText =
+    td [] [ text responseText ]
 
 
 viewTableRow : TableRow -> Maybe (Html Msg)
@@ -164,15 +205,15 @@ viewTableRow tableRow =
         HasOnlyInput llmRequest ->
             Just <|
                 tr []
-                    [ viewInputCell llmRequest
+                    [ viewInputCell llmRequest.requestText
                     , td [] [ text "Loading" ]
                     ]
 
         HasAllData data ->
             Just <|
                 tr []
-                    [ viewInputCell data.request
-                    , viewResponseCell data.response
+                    [ viewInputCell data.requestText
+                    , viewResponseCell data.responseText
                     ]
 
 
@@ -191,6 +232,16 @@ maybeToList m =
             [ x ]
 
 
+filterRow : TableRow -> List FullTableRow
+filterRow tableRow =
+    case tableRow of
+        HasAllData data ->
+            [ data ]
+
+        _ ->
+            []
+
+
 viewResponses : TableRows -> Html Msg
 viewResponses tableRows =
     table []
@@ -202,8 +253,8 @@ viewResponses tableRows =
         ]
 
 
-viewQuote : Model -> Html Msg
-viewQuote model =
+viewApp : Model -> Html Msg
+viewApp model =
     let
         state =
             model.request
@@ -212,7 +263,7 @@ viewQuote model =
         NotAsked ->
             div []
                 [ text "Try a search"
-                , input [ onInput UpdateRequest ] []
+                , input [ onInput UpdateRequest, Html.Attributes.name "query" ] []
                 , button [ onClick (SendRequest model.input) ] [ text "Ask!" ]
                 , viewResponses model.tableRows
                 ]
@@ -220,9 +271,10 @@ viewQuote model =
         Failure err ->
             div []
                 [ decodeError model err
-                , input [ onInput UpdateRequest ] []
+                , input [ onInput UpdateRequest ] [ text model.input ]
                 , button [ onClick (SendRequest model.input) ] [ text "Ask!" ]
                 , viewResponses model.tableRows
+                , text (Debug.toString model)
                 ]
 
         Loading ->
@@ -255,10 +307,27 @@ encodeRequest input =
         [ ( "text", Json.Encode.string input ) ]
 
 
-llmResponseDecoder : Decoder LLMResponse
+encodeResponse : String -> Json.Encode.Value
+encodeResponse input =
+    Json.Encode.object
+        [ ( "text", Json.Encode.string input ) ]
+
+
+encodeTableRow : FullTableRow -> Json.Encode.Value
+encodeTableRow row =
+    Json.Encode.object
+        [ ( "requestText", Json.Encode.string row.requestText ), ( "responseText", Json.Encode.string row.responseText ) ]
+
+
+encodeTableRows : TableRows -> Json.Encode.Value
+encodeTableRows rows =
+    Json.Encode.list encodeTableRow <| List.concat <| List.map filterRow rows
+
+
+llmResponseDecoder : Decode.Decoder LLMResponse
 llmResponseDecoder =
     Decode.succeed LLMResponse
-        |> required "text" string
+        |> required "text" Decode.string
 
 
 decodeError : Model -> Http.Error -> Html Msg
@@ -267,25 +336,21 @@ decodeError model error =
         Http.BadUrl string ->
             div []
                 [ text string
-                , viewResponses model.tableRows
                 ]
 
         Http.Timeout ->
             div []
                 [ text "Timeout :("
-                , viewResponses model.tableRows
                 ]
 
         Http.NetworkError ->
             div []
                 [ text "Network Error :("
-                , viewResponses model.tableRows
                 ]
 
         Http.BadStatus int ->
             div []
                 [ text ("Bad Status: " ++ String.fromInt int)
-                , viewResponses model.tableRows
                 ]
 
         Http.BadBody string ->
@@ -299,7 +364,22 @@ decodeError model error =
 -- PORTS
 
 
-port sendMessage : String -> Cmd msg
+port loadTableRows : (Json.Encode.Value -> msg) -> Sub msg
 
 
-port messageReceiver : (String -> msg) -> Sub msg
+port sendloadTableRowsMsg : () -> Cmd msg
+
+
+port saveTableRows : Json.Encode.Value -> Cmd msg
+
+
+tableRowDecoder : Decode.Decoder TableRow
+tableRowDecoder =
+    Decode.map2 (\request response -> HasAllData { requestText = request, responseText = response })
+        (Decode.field "requestText" Decode.string)
+        (Decode.field "responseText" Decode.string)
+
+
+tableRowsDecoder : Decode.Decoder TableRows
+tableRowsDecoder =
+    Decode.list tableRowDecoder

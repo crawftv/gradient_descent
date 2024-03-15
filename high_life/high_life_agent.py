@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from llama_index.core import PromptTemplate
 from llama_index.core.agent import ReActAgent, ReActChatFormatter
 from llama_index.core.indices import VectorStoreIndex
@@ -55,23 +57,37 @@ def search(query_str: str) -> dict[str, list[BaseNode]]:
     """
     provides recommendations on travel and wine, etc.
     """
+    hyde_vector_retriever = index.as_retriever(similarity_top_k=20,
+                                               node_postprocessors=[
+                                                   LLMRerank(
+                                                       choice_batch_size=3,
+                                                       top_n=2,
+                                                   ),
+                                               ],
+                                               query_transform=hyde
+                                               )
     # vector_retrieved_docs = vector_retriever.retrieve(query_str)[docs_index_start:docs_index_end]
     vector_retrieved_docs2 = hyde_vector_retriever.retrieve(query_str)
     _combined_docs: list[NodeWithScore] = vector_retrieved_docs2  # + vector_retrieved_docs2
-    contents = {}
+    contents = OrderedDict()
     for node in _combined_docs:
-        # go backwards
         new_node = node.node
-        while new_node.relationships.get(NodeRelationship.PREVIOUS):
-            next_node_id = new_node.relationships.get(NodeRelationship.PREVIOUS).node_id
-            new_node = retrieve_node(next_node_id)
-        _contents = [new_node]
-        # go forward
-        while new_node.relationships.get(NodeRelationship.NEXT):
-            next_node_id = new_node.relationships.get(NodeRelationship.NEXT).node_id
-            new_node = retrieve_node(next_node_id)
-            _contents.append(new_node)
-        contents[_contents[0].node_id] = _contents
+        # if there is a parent node add that.
+        if parent_node := new_node.relationships.get(NodeRelationship.PARENT):
+
+            contents[parent_node.node_id] = [retrieve_node(parent_node.node_id)]
+        else:
+            # go backwards
+            while new_node.relationships.get(NodeRelationship.PREVIOUS):
+                next_node_id = new_node.relationships.get(NodeRelationship.PREVIOUS).node_id
+                new_node = retrieve_node(next_node_id)
+            _contents = [new_node]
+            # go forward
+            while new_node.relationships.get(NodeRelationship.NEXT):
+                next_node_id = new_node.relationships.get(NodeRelationship.NEXT).node_id
+                new_node = retrieve_node(next_node_id)
+                _contents.append(new_node)
+            contents[_contents[0].node_id] = _contents
 
     return contents
 

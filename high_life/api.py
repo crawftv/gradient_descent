@@ -2,14 +2,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from starlette.responses import HTMLResponse
-from starlette.templating import Jinja2Templates
+from starlette.staticfiles import StaticFiles
 
 from high_life_agent import index
 from high_life_prompt import master_query
 
-templates = Jinja2Templates(directory="src")
-
 app = FastAPI()
+app.mount("/src", StaticFiles(directory="src"), name="src")
 
 origins = [
     "http://localhost:8002",

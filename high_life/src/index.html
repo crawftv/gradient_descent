@@ -2,31 +2,29 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Main</title>
-    <style>body { padding: 0; margin: 0; }</style>
-    <script type="text/javascript" src="src/elm.js"></script>
+
+    <title>Crawford's Recommender</title>
+    <script src="src/elm.js"></script>
 </head>
 
 <body>
-
-<pre id="elm"></pre>
+<div id="myapp"></div>
+</body>
 
 <script>
-    var app = Elm.Main.init({
-      node: document.getElementById('myapp')
-  });
-      // When a command goes to the `sendMessage` port, we pass the message
-    // along to the WebSocket.
-    app.ports.sendMessage.subscribe(function(message) {
-        socket.send(message);
-    });
+    var storedData = localStorage.getItem('tableRows');
+    var flags = storedData ? JSON.parse(storedData) : null;
 
-    // When a message comes into our WebSocket, we pass the message along
-    // to the `messageReceiver` port.
-    socket.addEventListener("message", function(event) {
-        app.ports.messageReceiver.send(event.data);
+
+    const app = Elm.Main.init({
+      node: document.getElementById('myapp'),
+	  flags: flags
     });
+    console.log(flags)
+
+    app.ports.saveTableRows.subscribe(function(tableRows) {
+    localStorage.setItem('tableRows', JSON.stringify(tableRows));
+    });
+    app.ports.loadTableRows.send(JSON.parse(localStorage.getItem('tableRows')));
 </script>
-
-</body>
 </html>
