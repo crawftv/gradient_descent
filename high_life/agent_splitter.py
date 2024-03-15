@@ -57,6 +57,47 @@ def hex_id(hash_value):
     return h.hexdigest()
 
 
+def passes_filter(text):
+    """Filter out bad or uninformative text."""
+    text_filter_list = ["+44 (0) 20 7725 4349 (view hours)", "", "Aton\nPadded coat", 'Forgotten password?',
+                        "Frequently asked questions",
+                        "It looks like your browser has JavaScript turned off. JavaScript is required for this feature to work.",
+                        "Please enter a valid email address", 'Your email address Please enter a valid email address',
+                        'Please enter a valid password', 'Your Monocle password Please enter a valid password',
+                        "Terms and conditions", "To stop receiving all Konfekt newsletters, please click here.",
+                        "Tiptoe\nLou stool", "© 2024 Monocle Back to top", "Unsubscribe from Konfekt Kompakt.",
+                        "new to monocle?", "Sign up to our daily newsletters",
+                        "Sign up to our weekly Saturday newsletter",
+                        "This email is from Konfekt whose registered office is at Dufourstrasse 90, Zürich. You have received this email because you have previously provided us with your email address and subscribed to Konfekt newsletters. © 2023 Konfekt.",
+                        "Tokyo\n+81 (0)3 6407 0845", "Unsubscribe from Konfekt Kompakt.",
+                        "Collect.Studio\nWaan Nozo bowl", "Comme des Garçons\nCandle One: Hinoki",
+                        "Comme des Garçons\nScent Three: Sugi", "Farmers’\nWelsh Lavender Foot Cream",
+                        "Leuchtturm1917\nWeekly diary 2024", "London\n+44 207 486 8770",
+                        "Monocle\nThe Monocle Book of Japan", "Monocle\nCotton twill cap",
+                        "Monocle magazine March 2024", "OLO\nCalavria roll-on fragrance", "Rier\nFleece overshirt",
+                        "Porter\nBackpack with detachable pouch", "Sargadelos\nMeigallo cobalt vase",
+                        "Zürich\n+41 44 368 70 01", "Email e Sign up Invalid email",
+                        "For the best experience with monocle.com, please ensure that your browser has Javascript enabled.",
+                        "Invalid email", "Laperruque\nNeck pouch", "Monocle email newsletters",
+                        "Sign up to Monocle’s email newsletters to stay on top of news and opinion, plus the latest from the magazine, radio, film and shop.",
+                        "This email is from Konfekt whose registered office is at Dufourstrasse 90, Zürich. You have received this email because you have previously provided us with your email address and subscribed to Konfekt newsletters. © 2022 Konfekt.",
+                        "Want more stories like these in your inbox?\nSign up to Monocle’s email newsletters to stay on top of news and opinion, plus the latest from the magazine, radio, film and shop. Email e Sign up Invalid email",
+                        "Comme des Garçons\nThis internationally recognised brand, with the dual design influences of Tokyo and Paris.",
+                        "Japan Collection\ncollection", "Konfekt - Issue ",
+                        "Founded by Bilbao-born Gonzalo Fonseca in 2007, Steve Mono creates shoes and bags that draw on Spanish culture, reinventing everything from traditional artisan sandals to canvas totes with a functional, modern spirit.",
+                        "Founded by Bilbao-born Gonzalo Fonseca in 2007, Steve Mono creates shoes and bags that draw on Spanish culture, reinventing everything from traditional artisan sandals to canvas totes with a functional, modern spirit.",
+                        "Arpenteur\nContour vest", "Aton\nSafari jacket", "Burel\nLarge weekender bag",
+                        "Konfekt has teamed up with a pair of like-minded brands to create two pieces – a bag and a soft cotton kaftan – to complete any sunny look.",
+                        "Leuchtturm1917\n",
+                        "Porter\nTokyo-made, our selection of bags have been made with the seasoned traveller in mind.",
+                        "Proteca\nEquinox Light U Carry-on suitcase 34 L", "Qwstion\nHoldall bag"
+                        ]
+
+    if (" " not in text or text in text_filter_list) and "Subscriptions start from" in text:
+        return False
+    return True
+
+
 def nodes_from_html(request: requests.Response, chunking_agent_llm=None):
     text = request.text  # simple_json_from_html_string(request.text, use_readability=True)["content"]
     doc = BeautifulSoup(text, 'html.parser')
@@ -69,17 +110,21 @@ def nodes_from_html(request: requests.Response, chunking_agent_llm=None):
     for parent_index in range(len(parents)):
         summary = parents[parent_index].summary
         primary_text = strip_text(parents[parent_index].chunk.text)
-        sub_nodes = []
-        parent_id = hex_id(primary_text)
+        if " " not in primary_text:
+            continue
+        text_hash = hex_id(primary_text)
         parent_document = Document(
-            id=parent_id,
             metadata={
+                "text_hash": text_hash,
                 "h1": strip_text(parents[parent_index].chunk.h1.text) if parents[parent_index].chunk.h1 else None,
                 "h2": strip_text(parents[parent_index].chunk.h2.text) if parents[parent_index].chunk.h2 else None,
                 "h3": strip_text(parents[parent_index].chunk.h3.text) if parents[parent_index].chunk.h3 else None,
-                "url": request.url, },
-            text=f"Summary of the Document: {summary}\nDocument: {primary_text}"
+                "url": request.url,
+                "Summary": summary
+            },
+            text=primary_text
         )
+        parent_document.excluded_llm_metadata_keys = ["Summary", "url", "hash"]
         _result = Settings.llm.complete(_fmt_promt(parent_index, parents)).text.strip()
         related = _result.startswith("Yes")
         if related and parent_documents:
@@ -94,10 +139,12 @@ def nodes_from_html(request: requests.Response, chunking_agent_llm=None):
             sub_nodes: list[TextNode] = []
             for i, sub_text in enumerate(sub_texts):
                 sub_text_text = strip_text(sub_text.text)
+                if " " not in sub_text_text:
+                    continue
                 new_node = TextNode(
-                    text=f"Summary of the Parent Document: {summary}\nDocument: {sub_text_text}",
-                    id=hex_id(sub_text_text),
+                    text=sub_text_text,
                     metadata={
+                        "text_hash": hex_id(sub_text_text),
                         "h1": strip_text(parents[parent_index].chunk.h1.text) if parents[
                             parent_index].chunk.h1 else None,
                         "h2": strip_text(parents[parent_index].chunk.h2.text) if parents[
@@ -105,8 +152,10 @@ def nodes_from_html(request: requests.Response, chunking_agent_llm=None):
                         "h3": strip_text(parents[parent_index].chunk.h3.text) if parents[
                             parent_index].chunk.h3 else None,
                         "url": request.url,
+                        "Parent Document Summary": summary,
                     },
                 )
+                new_node.excluded_llm_metadata_keys = ["Parent Document Summary", "url", "hash"]
                 new_node.relationships[NodeRelationship.PARENT] = RelatedNodeInfo(node_id=parent_document.node_id)
                 parent_document.relationships[NodeRelationship.CHILD] = RelatedNodeInfo(node_id=new_node.node_id)
                 if i > 0:
@@ -134,7 +183,14 @@ if __name__ == "__main__":
     import datetime
 
     day_of_interest = datetime.date.today()
-    while True:
+
+
+    def generator():
+        while True:
+            yield
+
+
+    for _ in tqdm(generator()):
         year = day_of_interest.year
         month = day_of_interest.month
         day = day_of_interest.day
