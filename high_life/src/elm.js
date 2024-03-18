@@ -6457,6 +6457,7 @@ var $author$project$Main$update = F2(
 						$author$project$Main$encodeTableRows(model.tableRows)));
 		}
 	});
+var $author$project$Main$appName = 'Crawford\'s Recommender';
 var $elm$html$Html$div = _VirtualDom_node('div');
 var $elm$html$Html$h2 = _VirtualDom_node('h2');
 var $elm$html$Html$h3 = _VirtualDom_node('h3');
@@ -6487,6 +6488,7 @@ var $elm$html$Html$table = _VirtualDom_node('table');
 var $elm$html$Html$tbody = _VirtualDom_node('tbody');
 var $elm$html$Html$th = _VirtualDom_node('th');
 var $elm$html$Html$thead = _VirtualDom_node('thead');
+var $elm$html$Html$progress = _VirtualDom_node('progress');
 var $elm$html$Html$td = _VirtualDom_node('td');
 var $elm$html$Html$tr = _VirtualDom_node('tr');
 var $author$project$Main$viewInputCell = function (input) {
@@ -6498,13 +6500,31 @@ var $author$project$Main$viewInputCell = function (input) {
 				$elm$html$Html$text(input)
 			]));
 };
+var $elm$html$Html$p = _VirtualDom_node('p');
+var $elm$html$Html$Attributes$stringProperty = F2(
+	function (key, string) {
+		return A2(
+			_VirtualDom_property,
+			key,
+			$elm$json$Json$Encode$string(string));
+	});
+var $elm$html$Html$Attributes$wrap = $elm$html$Html$Attributes$stringProperty('wrap');
 var $author$project$Main$viewResponseCell = function (responseText) {
 	return A2(
 		$elm$html$Html$td,
 		_List_Nil,
 		_List_fromArray(
 			[
-				$elm$html$Html$text(responseText)
+				A2(
+				$elm$html$Html$p,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$wrap('hard')
+					]),
+				_List_fromArray(
+					[
+						$elm$html$Html$text(responseText)
+					]))
 			]));
 };
 var $author$project$Main$viewTableRow = function (tableRow) {
@@ -6525,7 +6545,7 @@ var $author$project$Main$viewTableRow = function (tableRow) {
 							_List_Nil,
 							_List_fromArray(
 								[
-									$elm$html$Html$text('Loading')
+									A2($elm$html$Html$progress, _List_Nil, _List_Nil)
 								]))
 						])));
 		default:
@@ -6630,13 +6650,6 @@ var $author$project$Main$decodeError = F2(
 		}
 	});
 var $elm$html$Html$input = _VirtualDom_node('input');
-var $elm$html$Html$Attributes$stringProperty = F2(
-	function (key, string) {
-		return A2(
-			_VirtualDom_property,
-			key,
-			$elm$json$Json$Encode$string(string));
-	});
 var $elm$html$Html$Attributes$name = $elm$html$Html$Attributes$stringProperty('name');
 var $elm$virtual_dom$VirtualDom$Normal = function (a) {
 	return {$: 'Normal', a: a};
@@ -6686,7 +6699,6 @@ var $elm$html$Html$Events$onInput = function (tagger) {
 			$elm$html$Html$Events$alwaysStop,
 			A2($elm$json$Json$Decode$map, tagger, $elm$html$Html$Events$targetValue)));
 };
-var $elm$core$Debug$toString = _Debug_toString;
 var $author$project$Main$viewApp = function (model) {
 	var state = model.request;
 	switch (state.$) {
@@ -6702,7 +6714,7 @@ var $author$project$Main$viewApp = function (model) {
 						_List_fromArray(
 							[
 								$elm$html$Html$Events$onInput($author$project$Main$UpdateRequest),
-								$elm$html$Html$Attributes$name('query')
+								$elm$html$Html$Attributes$name($author$project$Main$appName + ' Query')
 							]),
 						_List_Nil),
 						A2(
@@ -6747,9 +6759,7 @@ var $author$project$Main$viewApp = function (model) {
 							[
 								$elm$html$Html$text('Ask!')
 							])),
-						$author$project$Main$viewResponses(model.tableRows),
-						$elm$html$Html$text(
-						$elm$core$Debug$toString(model))
+						$author$project$Main$viewResponses(model.tableRows)
 					]));
 		case 'Loading':
 			return A2(
@@ -6799,7 +6809,7 @@ var $author$project$Main$view = function (model) {
 				_List_Nil,
 				_List_fromArray(
 					[
-						$elm$html$Html$text('Recommender'),
+						$elm$html$Html$text($author$project$Main$appName),
 						A2(
 						$elm$html$Html$h3,
 						_List_Nil,
@@ -6808,8 +6818,7 @@ var $author$project$Main$view = function (model) {
 								$elm$html$Html$text('Get recommendations on Food, Wine, Travel, and more from trusted sources.')
 							]))
 					])),
-				$author$project$Main$viewApp(model),
-				$elm$html$Html$text(model.input)
+				$author$project$Main$viewApp(model)
 			]));
 };
 var $author$project$Main$main = $elm$browser$Browser$element(

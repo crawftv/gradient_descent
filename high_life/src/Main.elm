@@ -2,7 +2,7 @@ port module Main exposing (..)
 
 import Browser
 import Html exposing (..)
-import Html.Attributes exposing (style)
+import Html.Attributes exposing (wrap)
 import Html.Events exposing (..)
 import Http
 import Json.Decode as Decode
@@ -31,6 +31,10 @@ main =
         , subscriptions = subscriptions
         , view = view
         }
+
+
+appName =
+    "Crawford's Recommender"
 
 
 
@@ -178,11 +182,10 @@ view : Model -> Html Msg
 view model =
     div []
         [ h2 []
-            [ text "Recommender"
+            [ text appName
             , h3 [] [ text "Get recommendations on Food, Wine, Travel, and more from trusted sources." ]
             ]
         , viewApp model
-        , text model.input
         ]
 
 
@@ -193,7 +196,7 @@ viewInputCell input =
 
 viewResponseCell : ResponseText -> Html Msg
 viewResponseCell responseText =
-    td [] [ text responseText ]
+    td [] [ p [ wrap "hard" ] [ text responseText ] ]
 
 
 viewTableRow : TableRow -> Maybe (Html Msg)
@@ -206,7 +209,7 @@ viewTableRow tableRow =
             Just <|
                 tr []
                     [ viewInputCell llmRequest.requestText
-                    , td [] [ text "Loading" ]
+                    , td [] [ progress [] [] ]
                     ]
 
         HasAllData data ->
@@ -263,7 +266,7 @@ viewApp model =
         NotAsked ->
             div []
                 [ text "Try a search"
-                , input [ onInput UpdateRequest, Html.Attributes.name "query" ] []
+                , input [ onInput UpdateRequest, Html.Attributes.name <| appName ++ " Query" ] []
                 , button [ onClick (SendRequest model.input) ] [ text "Ask!" ]
                 , viewResponses model.tableRows
                 ]
@@ -274,7 +277,6 @@ viewApp model =
                 , input [ onInput UpdateRequest ] [ text model.input ]
                 , button [ onClick (SendRequest model.input) ] [ text "Ask!" ]
                 , viewResponses model.tableRows
-                , text (Debug.toString model)
                 ]
 
         Loading ->

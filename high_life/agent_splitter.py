@@ -1,5 +1,4 @@
 import functools
-import hashlib
 import re
 
 import requests
@@ -49,12 +48,6 @@ def _fmt_promt(index, parents: list[Chunk]):
 
 strip_text_pattern = re.compile(r"(\s+\s+)", )
 strip_text = lambda x: re.sub(strip_text_pattern, " ", x).strip()
-
-
-def hex_id(hash_value):
-    h = hashlib.new('sha256')
-    h.update(hash_value.encode())
-    return h.hexdigest()
 
 
 def passes_filter(text):

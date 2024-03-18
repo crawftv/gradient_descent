@@ -50,6 +50,7 @@ def retrieve_node(node_id):
     result = chroma_collection.get(ids=node_id)
     node = metadata_dict_to_node(result["metadatas"][0])
     node.set_content(result["documents"][0])
+    node.get_content()
     return node
 
 

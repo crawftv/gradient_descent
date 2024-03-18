@@ -85,14 +85,14 @@ prompt = PromptTemplate(""" You are the world's best recommendation bot designed
     ----------------------------------
     ------------Output format------------
     Summary: Give a summary of the document with respect to the query.
-    Resolves Query: True/False 
+    Resolves Query: Yes/No 
     """)
 
 ANSWERS = list[tuple[tuple[str, list[NodeWithScore]], CompletionResponse]]
 
 
 def filter_answer(answer: tuple[tuple[str, list[NodeWithScore]], CompletionResponse]):
-    if "resolves query: true" in answer[1].text.strip().lower():
+    if "resolves query: yes" in answer[1].text.strip().lower():
         return answer[0][0]
 
 
@@ -100,7 +100,7 @@ def master_query(query_str: str) -> str:
     texts = search(query_str)
     answers: ANSWERS = []
     for nodes in texts.values():
-        resp = Settings.llm.complete(
+        resp = Ollama(model="mistral", temperature=0, request_timeout=500).complete(
             prompt.format(query_str=query_str,
                           doc=" ".join([node.get_content(metadata_mode=MetadataMode.LLM) for node in nodes])))
         answers.append(resp)
@@ -119,14 +119,13 @@ def master_query(query_str: str) -> str:
     <<<RESPONSE INSTRUCTIONS: If the documents do not contain a suitable answer, simply respond: "i could not find a suitable answer".
     Do NOT suggest a solution from your own knowledge.
     Do NOT include phrases like 'Based on the provided documents, or 'According to the documents'. or  'based on the documents provided.'
-    DO NOT
     Make sure to include the url from the metadata for each document in the respected answer.>>>>
     -----------------
     Response: [Put your response here and include your reasoning]
     """)
 
-    answer_content = "".join(
-        "".join(
+    answer_content = "\n".join(
+        " ".join(
             [
                 node.get_content(metadata_mode=MetadataMode.NONE)
                 for node in node_list
@@ -138,7 +137,7 @@ def master_query(query_str: str) -> str:
         query_str=query_str,
         docs=answer_content
     )
-    resp = Ollama(model="mistral", temperature=0, request_timeout=500).complete(p)
+    resp = Ollama(model="mistral", temperature=0.1, request_timeout=500).complete(p)
     return resp.text
 
 
