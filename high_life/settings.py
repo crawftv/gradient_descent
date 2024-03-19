@@ -1,4 +1,5 @@
 import hashlib
+import sqlite3
 
 import chromadb
 from llama_index.core import StorageContext, Settings, set_global_handler
@@ -20,6 +21,45 @@ def hex_id(hash_value):
     h = hashlib.new('sha256')
     h.update(hash_value.encode())
     return h.hexdigest()
+
+
+def logging_startup():
+    conn = sqlite3.connect('logs.sqlite3')  # Replace with your database name
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS queries (
+            logging_id TEXT PRIMARY KEY,
+            query TEXT
+        )
+    """
+    )
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS vector_retrieval (
+            logging_id TEXT,
+            document TEXT,
+            FOREIGN KEY(logging_id) REFERENCES queries(logging_id)
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS filtering_responses (
+            logging_id TEXT,
+            input TEXT,
+            result TEXT,
+            FOREIGN KEY(logging_id) REFERENCES queries(logging_id)
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS final_responses (
+            logging_id TEXT PRIMARY KEY,
+            input TEXT,
+            result TEXT,
+            FOREIGN KEY(logging_id) REFERENCES queries(logging_id)
+        )
+    """)
+
 ###
 #  metadata_versions
 #  1. adding categories

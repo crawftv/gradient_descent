@@ -1,29 +1,16 @@
-from collections import OrderedDict
-
 from llama_index.core import PromptTemplate
 from llama_index.core.agent import ReActAgent, ReActChatFormatter
 from llama_index.core.indices import VectorStoreIndex
-from llama_index.core.indices.query.query_transform import HyDEQueryTransform
 from llama_index.core.postprocessor import LLMRerank
-from llama_index.core.schema import NodeWithScore, NodeRelationship, BaseNode
-from llama_index.core.vector_stores.utils import metadata_dict_to_node
 
-from settings import vector_store, storage_context, chroma_collection
+from settings import vector_store, storage_context
 
 index = VectorStoreIndex.from_vector_store(vector_store, storage_context=storage_context)
 
 retriever = index.as_retriever()
 
 query_engine = index.as_query_engine(similarity_top_k=10,
-                                     node_postprocessors=[
-                                         LLMRerank(
-
-                                             choice_batch_size=5,
-                                             top_n=5,
-                                         )
-                                     ],
-
-                                     )
+                                     node_postprocessors=[LLMRerank(choice_batch_size=5, top_n=5, )], )
 vector_retriever = index.as_retriever(similarity_top_k=10,
                                       node_postprocessors=[
                                           LLMRerank(
@@ -32,65 +19,8 @@ vector_retriever = index.as_retriever(similarity_top_k=10,
                                           )
                                       ],
                                       )
-hyde = HyDEQueryTransform(include_original=True, )
-hyde_vector_retriever = index.as_retriever(similarity_top_k=10,
-                                           node_postprocessors=[
-                                               LLMRerank(
-                                                   choice_batch_size=3,
-                                                   top_n=2,
-                                               ),
-                                           ],
-                                           query_transform=hyde
-                                           )
-
 
 # hyde_query_engine = TransformQueryEngine(query_engine, query_transform=hyde)
-
-def retrieve_node(node_id):
-    result = chroma_collection.get(ids=node_id)
-    node = metadata_dict_to_node(result["metadatas"][0])
-    node.set_content(result["documents"][0])
-    node.get_content()
-    return node
-
-
-def search(query_str: str) -> dict[str, list[BaseNode]]:
-    """
-    provides recommendations on travel and wine, etc.
-    """
-    hyde_vector_retriever = index.as_retriever(similarity_top_k=20,
-                                               node_postprocessors=[
-                                                   LLMRerank(
-                                                       choice_batch_size=3,
-                                                       top_n=2,
-                                                   ),
-                                               ],
-                                               query_transform=hyde
-                                               )
-    # vector_retrieved_docs = vector_retriever.retrieve(query_str)[docs_index_start:docs_index_end]
-    vector_retrieved_docs2 = hyde_vector_retriever.retrieve(query_str)
-    _combined_docs: list[NodeWithScore] = vector_retrieved_docs2  # + vector_retrieved_docs2
-    contents = OrderedDict()
-    for node in _combined_docs:
-        new_node = node.node
-        # if there is a parent node add that.
-        if parent_node := new_node.relationships.get(NodeRelationship.PARENT):
-
-            contents[parent_node.node_id] = [retrieve_node(parent_node.node_id)]
-        else:
-            # go backwards
-            while new_node.relationships.get(NodeRelationship.PREVIOUS):
-                next_node_id = new_node.relationships.get(NodeRelationship.PREVIOUS).node_id
-                new_node = retrieve_node(next_node_id)
-            _contents = [new_node]
-            # go forward
-            while new_node.relationships.get(NodeRelationship.NEXT):
-                next_node_id = new_node.relationships.get(NodeRelationship.NEXT).node_id
-                new_node = retrieve_node(next_node_id)
-                _contents.append(new_node)
-            contents[_contents[0].node_id] = _contents
-
-    return contents
 
 
 from llama_index.core.tools import FunctionTool
