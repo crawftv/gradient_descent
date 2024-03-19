@@ -1,9 +1,7 @@
 from llama_index.core import PromptTemplate, SelectorPromptTemplate, ChatPromptTemplate, Settings
-from llama_index.core.base.llms.types import ChatMessage, MessageRole, CompletionResponse
+from llama_index.core.base.llms.types import ChatMessage, MessageRole
 from llama_index.core.prompts import PromptType
 from llama_index.core.prompts.utils import is_chat_model
-from llama_index.core.schema import NodeWithScore, MetadataMode
-from llama_index.llms.ollama import Ollama
 
 from high_life_agent import search, hyde_vector_retriever
 
@@ -73,73 +71,6 @@ MODIFIED_TEXT_QA_SYSTEM_PROMPT_SEL = SelectorPromptTemplate(
     default_template=MODIFIED_TEXT_QA_PROMPT,
     conditionals=[(is_chat_model, CHAT_TEXT_QA_PROMPT)],
 )
-
-prompt = PromptTemplate(""" You are the world's best recommendation bot designed to answer user questions about food, travel, wine, etc.
-    We have provided you a document to answer a query from an search embedding search.
-    Your job is to determine whether the subject of document answers the query given the proper keywords or topics.
-    if some asks for a red wine rec, only affirm red wines.
-    if some asks about a city make sure the city is correct in the given document.
-    QUERY: {query_str}
-    ------------ Document ------------
-    {doc}
-    ----------------------------------
-    ------------Output format------------
-    Summary: Give a summary of the document with respect to the query.
-    Resolves Query: Yes/No 
-    """)
-
-ANSWERS = list[tuple[tuple[str, list[NodeWithScore]], CompletionResponse]]
-
-
-def filter_answer(answer: tuple[tuple[str, list[NodeWithScore]], CompletionResponse]):
-    if "resolves query: yes" in answer[1].text.strip().lower():
-        return answer[0][0]
-
-
-def master_query(query_str: str) -> str:
-    texts = search(query_str)
-    answers: ANSWERS = []
-    for nodes in texts.values():
-        resp = Ollama(model="mistral", temperature=0, request_timeout=500).complete(
-            prompt.format(query_str=query_str,
-                          doc=" ".join([node.get_content(metadata_mode=MetadataMode.LLM) for node in nodes])))
-        answers.append(resp)
-    answers = list(zip(texts.items(), answers))
-
-    final_answers: ANSWERS = list(filter(lambda x: filter_answer(x), answers))
-
-    p = PromptTemplate("""You are the worlds best Q&A bot, specializing in synthesizing correct answers to questions.
-    You will be given a knowledge base that has been proven to answer the user query.
-    You're job is to extract the text that best answers the query and give it to the user.
-    -----------------
-    KNOWLEDGE_BASE: {docs}
-    -----------------
-    QUERY: {query_str}
-    -----------------
-    <<<RESPONSE INSTRUCTIONS: If the documents do not contain a suitable answer, simply respond: "i could not find a suitable answer".
-    Do NOT suggest a solution from your own knowledge.
-    Do NOT include phrases like 'Based on the provided documents, or 'According to the documents'. or  'based on the documents provided.'
-    Make sure to include the url from the metadata for each document in the respected answer.>>>>
-    -----------------
-    Response: [Put your response here and include your reasoning]
-    """)
-
-    answer_content = "\n".join(
-        " ".join(
-            [
-                node.get_content(metadata_mode=MetadataMode.NONE)
-                for node in node_list
-            ]
-        )
-        for (id, node_list), completion_response in final_answers
-    )
-    p = p.format(
-        query_str=query_str,
-        docs=answer_content
-    )
-    resp = Ollama(model="mistral", temperature=0.1, request_timeout=500).complete(p)
-    return resp.text
-
 
 if __name__ == "__main__":
     query_str = (
