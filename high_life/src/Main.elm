@@ -2,7 +2,7 @@ port module Main exposing (..)
 
 import Browser
 import Html exposing (..)
-import Html.Attributes exposing (wrap)
+import Html.Attributes exposing (value, wrap)
 import Html.Events exposing (..)
 import Http
 import Json.Decode as Decode
@@ -121,7 +121,7 @@ update msg model =
                         tableRows =
                             newRow :: model.tableRows
                     in
-                    ( { input = "", request = Loading, newRow = newRow, tableRows = tableRows }, postLLMRequest input )
+                    ( { input = input, request = Loading, newRow = newRow, tableRows = tableRows }, postLLMRequest input )
 
                 _ ->
                     ( { model | request = NotAsked }, Cmd.none )
@@ -152,7 +152,14 @@ update msg model =
                     ( model, Cmd.none )
 
                 Failure err ->
-                    ( { model | request = Failure err, input = model.input, newRow = HasOnlyInput { requestText = model.input }, tableRows = List.drop 1 model.tableRows }, Cmd.none )
+                    ( { model
+                        | request = Failure err
+                        , input = model.input
+                        , newRow = HasOnlyInput { requestText = model.input }
+                        , tableRows = List.drop 1 model.tableRows
+                      }
+                    , Cmd.none
+                    )
 
                 Loading ->
                     ( { model | request = Loading }, Cmd.none )
@@ -181,10 +188,8 @@ subscriptions _ =
 view : Model -> Html Msg
 view model =
     div []
-        [ h2 []
-            [ text appName
-            , h3 [] [ text "Get recommendations on Food, Wine, Travel, and more from trusted sources." ]
-            ]
+        [ h2 [] [ text appName ]
+        , h3 [] [ text "Get recommendations on Food, Wine, Travel, and more from trusted sources." ]
         , viewApp model
         ]
 
@@ -274,7 +279,7 @@ viewApp model =
         Failure err ->
             div []
                 [ decodeError model err
-                , input [ onInput UpdateRequest ] [ text model.input ]
+                , input [ onInput UpdateRequest, value model.input ] [ text model.input ]
                 , button [ onClick (SendRequest model.input) ] [ text "Ask!" ]
                 , viewResponses model.tableRows
                 ]

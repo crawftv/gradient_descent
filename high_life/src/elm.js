@@ -6374,7 +6374,7 @@ var $author$project$Main$update = F2(
 					var newRow = $author$project$Main$HasOnlyInput(data);
 					var tableRows = A2($elm$core$List$cons, newRow, model.tableRows);
 					return _Utils_Tuple2(
-						{input: '', newRow: newRow, request: $krisajenkins$remotedata$RemoteData$Loading, tableRows: tableRows},
+						{input: input, newRow: newRow, request: $krisajenkins$remotedata$RemoteData$Loading, tableRows: tableRows},
 						$author$project$Main$postLLMRequest(input));
 				} else {
 					return _Utils_Tuple2(
@@ -6699,6 +6699,7 @@ var $elm$html$Html$Events$onInput = function (tagger) {
 			$elm$html$Html$Events$alwaysStop,
 			A2($elm$json$Json$Decode$map, tagger, $elm$html$Html$Events$targetValue)));
 };
+var $elm$html$Html$Attributes$value = $elm$html$Html$Attributes$stringProperty('value');
 var $author$project$Main$viewApp = function (model) {
 	var state = model.request;
 	switch (state.$) {
@@ -6742,7 +6743,8 @@ var $author$project$Main$viewApp = function (model) {
 						$elm$html$Html$input,
 						_List_fromArray(
 							[
-								$elm$html$Html$Events$onInput($author$project$Main$UpdateRequest)
+								$elm$html$Html$Events$onInput($author$project$Main$UpdateRequest),
+								$elm$html$Html$Attributes$value(model.input)
 							]),
 						_List_fromArray(
 							[
@@ -6809,14 +6811,14 @@ var $author$project$Main$view = function (model) {
 				_List_Nil,
 				_List_fromArray(
 					[
-						$elm$html$Html$text($author$project$Main$appName),
-						A2(
-						$elm$html$Html$h3,
-						_List_Nil,
-						_List_fromArray(
-							[
-								$elm$html$Html$text('Get recommendations on Food, Wine, Travel, and more from trusted sources.')
-							]))
+						$elm$html$Html$text($author$project$Main$appName)
+					])),
+				A2(
+				$elm$html$Html$h3,
+				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$text('Get recommendations on Food, Wine, Travel, and more from trusted sources.')
 					])),
 				$author$project$Main$viewApp(model)
 			]));
