@@ -8,8 +8,10 @@ import Http
 import Json.Decode as Decode
 import Json.Decode.Pipeline exposing (required)
 import Json.Encode
+import Random
 import RemoteData exposing (RemoteData(..), WebData)
 import RemoteData.Http
+import UUID exposing (UUID)
 
 
 type alias Key =
@@ -46,7 +48,13 @@ type alias Model =
     , request : WebData LLMRequest
     , newRow : TableRow
     , tableRows : TableRows
+    , llmProgress : LLMProgress
     }
+
+
+type LLMProgress
+    = NoLLMProgressUpdate
+    | LLMProgressUpdate String
 
 
 type alias ResponseText =
@@ -89,10 +97,10 @@ init : Json.Encode.Value -> ( Model, Cmd Msg )
 init flags =
     case Decode.decodeValue tableRowsDecoder flags of
         Ok tableRows ->
-            ( Model "" NotAsked NoInput tableRows, Cmd.none )
+            ( Model "" NotAsked NoInput tableRows NoLLMProgressUpdate, Cmd.none )
 
         Err _ ->
-            ( Model "" NotAsked NoInput [], Cmd.none )
+            ( Model "" NotAsked NoInput [] NoLLMProgressUpdate, Cmd.none )
 
 
 
@@ -106,6 +114,7 @@ type Msg
     | UseResponseToUpdateModel (WebData LLMResponse)
     | LoadTableRowsFromLocalStorage Json.Encode.Value
     | SaveTableRowsToLocalStorage
+    | Recv String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -115,13 +124,18 @@ update msg model =
             case model.newRow of
                 HasOnlyInput data ->
                     let
+                        webSocketClientId =
+                            UUID.toString <| Tuple.first <| Random.step UUID.generator (Random.initialSeed 12345)
+
                         newRow =
                             HasOnlyInput data
 
                         tableRows =
                             newRow :: model.tableRows
                     in
-                    ( { input = input, request = Loading, newRow = newRow, tableRows = tableRows }, postLLMRequest input )
+                    ( { input = input, request = Loading, newRow = newRow, tableRows = tableRows, llmProgress = NoLLMProgressUpdate }
+                    , Cmd.batch [ openWebSocket webSocketClientId, postLLMRequest webSocketClientId input ]
+                    )
 
                 _ ->
                     ( { model | request = NotAsked }, Cmd.none )
@@ -141,7 +155,7 @@ update msg model =
                                 tableRows =
                                     newRow :: List.drop 1 model.tableRows
                             in
-                            ( { input = "", request = NotAsked, newRow = NoInput, tableRows = tableRows }
+                            ( { input = "", request = NotAsked, newRow = NoInput, tableRows = tableRows, llmProgress = NoLLMProgressUpdate }
                             , saveTableRows <| encodeTableRows tableRows
                             )
 
@@ -175,10 +189,20 @@ update msg model =
         SaveTableRowsToLocalStorage ->
             ( model, saveTableRows <| encodeTableRows model.tableRows )
 
+        Recv message ->
+            case model.request of
+                Loading ->
+                    ( { model | llmProgress = LLMProgressUpdate message }
+                    , Cmd.none
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
+
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    loadTableRows LoadTableRowsFromLocalStorage
+    messageReceiver Recv
 
 
 
@@ -190,6 +214,7 @@ view model =
     div []
         [ h2 [] [ text appName ]
         , h3 [] [ text "Get recommendations on Food, Wine, Travel, and more from trusted sources." ]
+        , h5 [] [ text <| Debug.toString model.llmProgress ]
         , viewApp model
         ]
 
@@ -204,18 +229,26 @@ viewResponseCell responseText =
     td [] [ p [ wrap "hard" ] [ text responseText ] ]
 
 
-viewTableRow : TableRow -> Maybe (Html Msg)
-viewTableRow tableRow =
+viewTableRow : LLMProgress -> TableRow -> Maybe (Html Msg)
+viewTableRow llmProgress tableRow =
     case tableRow of
         NoInput ->
             Nothing
 
         HasOnlyInput llmRequest ->
             Just <|
-                tr []
-                    [ viewInputCell llmRequest.requestText
-                    , td [] [ progress [] [] ]
-                    ]
+                case llmProgress of
+                    NoLLMProgressUpdate ->
+                        tr []
+                            [ viewInputCell llmRequest.requestText
+                            , td [] [ progress [] [] ]
+                            ]
+
+                    LLMProgressUpdate message ->
+                        tr []
+                            [ viewInputCell llmRequest.requestText
+                            , td [] [ progress [] [], text message ]
+                            ]
 
         HasAllData data ->
             Just <|
@@ -225,9 +258,9 @@ viewTableRow tableRow =
                     ]
 
 
-viewTableRows : TableRows -> List (Maybe (Html Msg))
-viewTableRows tableRows =
-    List.map viewTableRow tableRows
+viewTableRows : LLMProgress -> TableRows -> List (Maybe (Html Msg))
+viewTableRows llmProgress tableRows =
+    List.map (viewTableRow llmProgress) tableRows
 
 
 maybeToList : Maybe a -> List a
@@ -250,14 +283,14 @@ filterRow tableRow =
             []
 
 
-viewResponses : TableRows -> Html Msg
-viewResponses tableRows =
+viewResponses : LLMProgress -> TableRows -> Html Msg
+viewResponses llmProgress tableRows =
     table []
         [ thead []
             [ th [] [ text "Query" ]
             , th [] [ text "Answer" ]
             ]
-        , tbody [] <| List.concatMap maybeToList (viewTableRows tableRows)
+        , tbody [] <| List.concatMap maybeToList (viewTableRows llmProgress tableRows)
         ]
 
 
@@ -273,7 +306,7 @@ viewApp model =
                 [ text "Try a search"
                 , input [ onInput UpdateRequest, Html.Attributes.name <| appName ++ " Query" ] []
                 , button [ onClick (SendRequest model.input) ] [ text "Ask!" ]
-                , viewResponses model.tableRows
+                , viewResponses model.llmProgress model.tableRows
                 ]
 
         Failure err ->
@@ -281,12 +314,12 @@ viewApp model =
                 [ decodeError model err
                 , input [ onInput UpdateRequest, value model.input ] [ text model.input ]
                 , button [ onClick (SendRequest model.input) ] [ text "Ask!" ]
-                , viewResponses model.tableRows
+                , viewResponses model.llmProgress model.tableRows
                 ]
 
         Loading ->
             div []
-                [ viewResponses model.tableRows
+                [ viewResponses model.llmProgress model.tableRows
                 ]
 
         Success _ ->
@@ -294,7 +327,7 @@ viewApp model =
                 [ text "Try a search"
                 , input [ onInput UpdateRequest ] []
                 , button [ onClick <| SendRequest model.input ] [ text "Ask!" ]
-                , viewResponses model.tableRows
+                , viewResponses model.llmProgress model.tableRows
                 ]
 
 
@@ -302,10 +335,10 @@ viewApp model =
 -- HTTP
 
 
-postLLMRequest : String -> Cmd Msg
-postLLMRequest input =
+postLLMRequest : String -> String -> Cmd Msg
+postLLMRequest webSocketClientId input =
     --  (crossOrigin "http://localhost:8001/query" [] [])
-    RemoteData.Http.postWithConfig RemoteData.Http.defaultConfig "/query" UseResponseToUpdateModel llmResponseDecoder (encodeRequest input)
+    RemoteData.Http.postWithConfig RemoteData.Http.defaultConfig ("/query/" ++ webSocketClientId) UseResponseToUpdateModel llmResponseDecoder (encodeRequest input)
 
 
 encodeRequest : String -> Json.Encode.Value
@@ -363,7 +396,7 @@ decodeError model error =
         Http.BadBody string ->
             div []
                 [ text ("Bad Request Body :(" ++ " " ++ string)
-                , viewResponses model.tableRows
+                , viewResponses model.llmProgress model.tableRows
                 ]
 
 
@@ -374,10 +407,13 @@ decodeError model error =
 port loadTableRows : (Json.Encode.Value -> msg) -> Sub msg
 
 
-port sendloadTableRowsMsg : () -> Cmd msg
+port messageReceiver : (String -> msg) -> Sub msg
 
 
 port saveTableRows : Json.Encode.Value -> Cmd msg
+
+
+port openWebSocket : String -> Cmd msg
 
 
 tableRowDecoder : Decode.Decoder TableRow

@@ -4373,6 +4373,43 @@ function _Browser_load(url)
 
 
 
+var _Bitwise_and = F2(function(a, b)
+{
+	return a & b;
+});
+
+var _Bitwise_or = F2(function(a, b)
+{
+	return a | b;
+});
+
+var _Bitwise_xor = F2(function(a, b)
+{
+	return a ^ b;
+});
+
+function _Bitwise_complement(a)
+{
+	return ~a;
+};
+
+var _Bitwise_shiftLeftBy = F2(function(offset, a)
+{
+	return a << offset;
+});
+
+var _Bitwise_shiftRightBy = F2(function(offset, a)
+{
+	return a >> offset;
+});
+
+var _Bitwise_shiftRightZfBy = F2(function(offset, a)
+{
+	return a >>> offset;
+});
+
+
+
 // SEND REQUEST
 
 var _Http_toTask = F3(function(router, toTask, request)
@@ -5334,11 +5371,12 @@ var $elm$core$Task$perform = F2(
 				A2($elm$core$Task$map, toMessage, task)));
 	});
 var $elm$browser$Browser$element = _Browser_element;
-var $author$project$Main$Model = F4(
-	function (input, request, newRow, tableRows) {
-		return {input: input, newRow: newRow, request: request, tableRows: tableRows};
+var $author$project$Main$Model = F5(
+	function (input, request, newRow, tableRows, llmProgress) {
+		return {input: input, llmProgress: llmProgress, newRow: newRow, request: request, tableRows: tableRows};
 	});
 var $author$project$Main$NoInput = {$: 'NoInput'};
+var $author$project$Main$NoLLMProgressUpdate = {$: 'NoLLMProgressUpdate'};
 var $krisajenkins$remotedata$RemoteData$NotAsked = {$: 'NotAsked'};
 var $elm$json$Json$Decode$decodeValue = _Json_run;
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
@@ -5364,27 +5402,29 @@ var $author$project$Main$init = function (flags) {
 	if (_v0.$ === 'Ok') {
 		var tableRows = _v0.a;
 		return _Utils_Tuple2(
-			A4($author$project$Main$Model, '', $krisajenkins$remotedata$RemoteData$NotAsked, $author$project$Main$NoInput, tableRows),
+			A5($author$project$Main$Model, '', $krisajenkins$remotedata$RemoteData$NotAsked, $author$project$Main$NoInput, tableRows, $author$project$Main$NoLLMProgressUpdate),
 			$elm$core$Platform$Cmd$none);
 	} else {
 		return _Utils_Tuple2(
-			A4($author$project$Main$Model, '', $krisajenkins$remotedata$RemoteData$NotAsked, $author$project$Main$NoInput, _List_Nil),
+			A5($author$project$Main$Model, '', $krisajenkins$remotedata$RemoteData$NotAsked, $author$project$Main$NoInput, _List_Nil, $author$project$Main$NoLLMProgressUpdate),
 			$elm$core$Platform$Cmd$none);
 	}
 };
-var $author$project$Main$LoadTableRowsFromLocalStorage = function (a) {
-	return {$: 'LoadTableRowsFromLocalStorage', a: a};
+var $author$project$Main$Recv = function (a) {
+	return {$: 'Recv', a: a};
 };
-var $elm$json$Json$Decode$value = _Json_decodeValue;
-var $author$project$Main$loadTableRows = _Platform_incomingPort('loadTableRows', $elm$json$Json$Decode$value);
+var $author$project$Main$messageReceiver = _Platform_incomingPort('messageReceiver', $elm$json$Json$Decode$string);
 var $author$project$Main$subscriptions = function (_v0) {
-	return $author$project$Main$loadTableRows($author$project$Main$LoadTableRowsFromLocalStorage);
+	return $author$project$Main$messageReceiver($author$project$Main$Recv);
 };
 var $krisajenkins$remotedata$RemoteData$Failure = function (a) {
 	return {$: 'Failure', a: a};
 };
 var $author$project$Main$HasOnlyInput = function (a) {
 	return {$: 'HasOnlyInput', a: a};
+};
+var $author$project$Main$LLMProgressUpdate = function (a) {
+	return {$: 'LLMProgressUpdate', a: a};
 };
 var $author$project$Main$LLMRequest = function (requestText) {
 	return {requestText: requestText};
@@ -5473,6 +5513,159 @@ var $author$project$Main$encodeTableRows = function (rows) {
 		$elm$core$List$concat(
 			A2($elm$core$List$map, $author$project$Main$filterRow, rows)));
 };
+var $TSFoster$elm_uuid$UUID$UUID = F4(
+	function (a, b, c, d) {
+		return {$: 'UUID', a: a, b: b, c: c, d: d};
+	});
+var $elm$core$Basics$composeR = F3(
+	function (f, g, x) {
+		return g(
+			f(x));
+	});
+var $elm$random$Random$Generator = function (a) {
+	return {$: 'Generator', a: a};
+};
+var $elm$random$Random$map = F2(
+	function (func, _v0) {
+		var genA = _v0.a;
+		return $elm$random$Random$Generator(
+			function (seed0) {
+				var _v1 = genA(seed0);
+				var a = _v1.a;
+				var seed1 = _v1.b;
+				return _Utils_Tuple2(
+					func(a),
+					seed1);
+			});
+	});
+var $elm$random$Random$map4 = F5(
+	function (func, _v0, _v1, _v2, _v3) {
+		var genA = _v0.a;
+		var genB = _v1.a;
+		var genC = _v2.a;
+		var genD = _v3.a;
+		return $elm$random$Random$Generator(
+			function (seed0) {
+				var _v4 = genA(seed0);
+				var a = _v4.a;
+				var seed1 = _v4.b;
+				var _v5 = genB(seed1);
+				var b = _v5.a;
+				var seed2 = _v5.b;
+				var _v6 = genC(seed2);
+				var c = _v6.a;
+				var seed3 = _v6.b;
+				var _v7 = genD(seed3);
+				var d = _v7.a;
+				var seed4 = _v7.b;
+				return _Utils_Tuple2(
+					A4(func, a, b, c, d),
+					seed4);
+			});
+	});
+var $elm$core$Bitwise$shiftRightZfBy = _Bitwise_shiftRightZfBy;
+var $TSFoster$elm_uuid$UUID$forceUnsigned = $elm$core$Bitwise$shiftRightZfBy(0);
+var $elm$core$Bitwise$and = _Bitwise_and;
+var $elm$core$Basics$negate = function (n) {
+	return -n;
+};
+var $elm$random$Random$Seed = F2(
+	function (a, b) {
+		return {$: 'Seed', a: a, b: b};
+	});
+var $elm$random$Random$next = function (_v0) {
+	var state0 = _v0.a;
+	var incr = _v0.b;
+	return A2($elm$random$Random$Seed, ((state0 * 1664525) + incr) >>> 0, incr);
+};
+var $elm$core$Bitwise$xor = _Bitwise_xor;
+var $elm$random$Random$peel = function (_v0) {
+	var state = _v0.a;
+	var word = (state ^ (state >>> ((state >>> 28) + 4))) * 277803737;
+	return ((word >>> 22) ^ word) >>> 0;
+};
+var $elm$random$Random$int = F2(
+	function (a, b) {
+		return $elm$random$Random$Generator(
+			function (seed0) {
+				var _v0 = (_Utils_cmp(a, b) < 0) ? _Utils_Tuple2(a, b) : _Utils_Tuple2(b, a);
+				var lo = _v0.a;
+				var hi = _v0.b;
+				var range = (hi - lo) + 1;
+				if (!((range - 1) & range)) {
+					return _Utils_Tuple2(
+						(((range - 1) & $elm$random$Random$peel(seed0)) >>> 0) + lo,
+						$elm$random$Random$next(seed0));
+				} else {
+					var threshhold = (((-range) >>> 0) % range) >>> 0;
+					var accountForBias = function (seed) {
+						accountForBias:
+						while (true) {
+							var x = $elm$random$Random$peel(seed);
+							var seedN = $elm$random$Random$next(seed);
+							if (_Utils_cmp(x, threshhold) < 0) {
+								var $temp$seed = seedN;
+								seed = $temp$seed;
+								continue accountForBias;
+							} else {
+								return _Utils_Tuple2((x % range) + lo, seedN);
+							}
+						}
+					};
+					return accountForBias(seed0);
+				}
+			});
+	});
+var $elm$random$Random$maxInt = 2147483647;
+var $elm$random$Random$minInt = -2147483648;
+var $TSFoster$elm_uuid$UUID$randomU32 = A2(
+	$elm$random$Random$map,
+	$TSFoster$elm_uuid$UUID$forceUnsigned,
+	A2($elm$random$Random$int, $elm$random$Random$minInt, $elm$random$Random$maxInt));
+var $elm$core$Bitwise$or = _Bitwise_or;
+var $TSFoster$elm_uuid$UUID$toVariant1 = function (_v0) {
+	var a = _v0.a;
+	var b = _v0.b;
+	var c = _v0.c;
+	var d = _v0.d;
+	return A4(
+		$TSFoster$elm_uuid$UUID$UUID,
+		a,
+		b,
+		$TSFoster$elm_uuid$UUID$forceUnsigned(2147483648 | (1073741823 & c)),
+		d);
+};
+var $elm$core$Bitwise$shiftLeftBy = _Bitwise_shiftLeftBy;
+var $TSFoster$elm_uuid$UUID$toVersion = F2(
+	function (v, _v0) {
+		var a = _v0.a;
+		var b = _v0.b;
+		var c = _v0.c;
+		var d = _v0.d;
+		return A4(
+			$TSFoster$elm_uuid$UUID$UUID,
+			a,
+			$TSFoster$elm_uuid$UUID$forceUnsigned((v << 12) | (4294905855 & b)),
+			c,
+			d);
+	});
+var $TSFoster$elm_uuid$UUID$generator = A2(
+	$elm$random$Random$map,
+	A2(
+		$elm$core$Basics$composeR,
+		$TSFoster$elm_uuid$UUID$toVersion(4),
+		$TSFoster$elm_uuid$UUID$toVariant1),
+	A5($elm$random$Random$map4, $TSFoster$elm_uuid$UUID$UUID, $TSFoster$elm_uuid$UUID$randomU32, $TSFoster$elm_uuid$UUID$randomU32, $TSFoster$elm_uuid$UUID$randomU32, $TSFoster$elm_uuid$UUID$randomU32));
+var $elm$random$Random$initialSeed = function (x) {
+	var _v0 = $elm$random$Random$next(
+		A2($elm$random$Random$Seed, 0, 1013904223));
+	var state1 = _v0.a;
+	var incr = _v0.b;
+	var state2 = (state1 + x) >>> 0;
+	return $elm$random$Random$next(
+		A2($elm$random$Random$Seed, state2, incr));
+};
+var $author$project$Main$openWebSocket = _Platform_outgoingPort('openWebSocket', $elm$json$Json$Encode$string);
 var $author$project$Main$UseResponseToUpdateModel = function (a) {
 	return {$: 'UseResponseToUpdateModel', a: a};
 };
@@ -6062,11 +6255,6 @@ var $elm$http$Http$jsonBody = function (value) {
 		'application/json',
 		A2($elm$json$Json$Encode$encode, 0, value));
 };
-var $elm$core$Basics$composeR = F3(
-	function (f, g, x) {
-		return g(
-			f(x));
-	});
 var $elm$json$Json$Decode$decodeString = _Json_runOnString;
 var $elm$http$Http$expectStringResponse = F2(
 	function (toMsg, toResult) {
@@ -6353,16 +6541,152 @@ var $ohanhi$remotedata_http$RemoteData$Http$requestWithJson = F6(
 			$elm$http$Http$jsonBody(body));
 	});
 var $ohanhi$remotedata_http$RemoteData$Http$postWithConfig = $ohanhi$remotedata_http$RemoteData$Http$requestWithJson('POST');
-var $author$project$Main$postLLMRequest = function (input) {
-	return A5(
-		$ohanhi$remotedata_http$RemoteData$Http$postWithConfig,
-		$ohanhi$remotedata_http$RemoteData$Http$defaultConfig,
-		'/query',
-		$author$project$Main$UseResponseToUpdateModel,
-		$author$project$Main$llmResponseDecoder,
-		$author$project$Main$encodeRequest(input));
-};
+var $author$project$Main$postLLMRequest = F2(
+	function (webSocketClientId, input) {
+		return A5(
+			$ohanhi$remotedata_http$RemoteData$Http$postWithConfig,
+			$ohanhi$remotedata_http$RemoteData$Http$defaultConfig,
+			'/query/' + webSocketClientId,
+			$author$project$Main$UseResponseToUpdateModel,
+			$author$project$Main$llmResponseDecoder,
+			$author$project$Main$encodeRequest(input));
+	});
 var $author$project$Main$saveTableRows = _Platform_outgoingPort('saveTableRows', $elm$core$Basics$identity);
+var $elm$random$Random$step = F2(
+	function (_v0, seed) {
+		var generator = _v0.a;
+		return generator(seed);
+	});
+var $elm$core$String$cons = _String_cons;
+var $elm$core$String$fromChar = function (_char) {
+	return A2($elm$core$String$cons, _char, '');
+};
+var $elm$core$Bitwise$shiftRightBy = _Bitwise_shiftRightBy;
+var $elm$core$String$repeatHelp = F3(
+	function (n, chunk, result) {
+		return (n <= 0) ? result : A3(
+			$elm$core$String$repeatHelp,
+			n >> 1,
+			_Utils_ap(chunk, chunk),
+			(!(n & 1)) ? result : _Utils_ap(result, chunk));
+	});
+var $elm$core$String$repeat = F2(
+	function (n, chunk) {
+		return A3($elm$core$String$repeatHelp, n, chunk, '');
+	});
+var $elm$core$String$padLeft = F3(
+	function (n, _char, string) {
+		return _Utils_ap(
+			A2(
+				$elm$core$String$repeat,
+				n - $elm$core$String$length(string),
+				$elm$core$String$fromChar(_char)),
+			string);
+	});
+var $elm$core$String$fromList = _String_fromList;
+var $TSFoster$elm_uuid$UUID$toHex = F2(
+	function (acc, _int) {
+		toHex:
+		while (true) {
+			if (!_int) {
+				return $elm$core$String$fromList(acc);
+			} else {
+				var _char = function () {
+					var _v0 = 15 & _int;
+					switch (_v0) {
+						case 0:
+							return _Utils_chr('0');
+						case 1:
+							return _Utils_chr('1');
+						case 2:
+							return _Utils_chr('2');
+						case 3:
+							return _Utils_chr('3');
+						case 4:
+							return _Utils_chr('4');
+						case 5:
+							return _Utils_chr('5');
+						case 6:
+							return _Utils_chr('6');
+						case 7:
+							return _Utils_chr('7');
+						case 8:
+							return _Utils_chr('8');
+						case 9:
+							return _Utils_chr('9');
+						case 10:
+							return _Utils_chr('a');
+						case 11:
+							return _Utils_chr('b');
+						case 12:
+							return _Utils_chr('c');
+						case 13:
+							return _Utils_chr('d');
+						case 14:
+							return _Utils_chr('e');
+						default:
+							return _Utils_chr('f');
+					}
+				}();
+				var $temp$acc = A2($elm$core$List$cons, _char, acc),
+					$temp$int = _int >>> 4;
+				acc = $temp$acc;
+				_int = $temp$int;
+				continue toHex;
+			}
+		}
+	});
+var $TSFoster$elm_uuid$UUID$toStringWith = F2(
+	function (sep, _v0) {
+		var a = _v0.a;
+		var b = _v0.b;
+		var c = _v0.c;
+		var d = _v0.d;
+		return _Utils_ap(
+			A3(
+				$elm$core$String$padLeft,
+				8,
+				_Utils_chr('0'),
+				A2($TSFoster$elm_uuid$UUID$toHex, _List_Nil, a)),
+			_Utils_ap(
+				sep,
+				_Utils_ap(
+					A3(
+						$elm$core$String$padLeft,
+						4,
+						_Utils_chr('0'),
+						A2($TSFoster$elm_uuid$UUID$toHex, _List_Nil, b >>> 16)),
+					_Utils_ap(
+						sep,
+						_Utils_ap(
+							A3(
+								$elm$core$String$padLeft,
+								4,
+								_Utils_chr('0'),
+								A2($TSFoster$elm_uuid$UUID$toHex, _List_Nil, 65535 & b)),
+							_Utils_ap(
+								sep,
+								_Utils_ap(
+									A3(
+										$elm$core$String$padLeft,
+										4,
+										_Utils_chr('0'),
+										A2($TSFoster$elm_uuid$UUID$toHex, _List_Nil, c >>> 16)),
+									_Utils_ap(
+										sep,
+										_Utils_ap(
+											A3(
+												$elm$core$String$padLeft,
+												4,
+												_Utils_chr('0'),
+												A2($TSFoster$elm_uuid$UUID$toHex, _List_Nil, 65535 & c)),
+											A3(
+												$elm$core$String$padLeft,
+												8,
+												_Utils_chr('0'),
+												A2($TSFoster$elm_uuid$UUID$toHex, _List_Nil, d)))))))))));
+	});
+var $TSFoster$elm_uuid$UUID$toString = $TSFoster$elm_uuid$UUID$toStringWith('-');
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
@@ -6371,11 +6695,21 @@ var $author$project$Main$update = F2(
 				var _v1 = model.newRow;
 				if (_v1.$ === 'HasOnlyInput') {
 					var data = _v1.a;
+					var webSocketClientId = $TSFoster$elm_uuid$UUID$toString(
+						A2(
+							$elm$random$Random$step,
+							$TSFoster$elm_uuid$UUID$generator,
+							$elm$random$Random$initialSeed(12345)).a);
 					var newRow = $author$project$Main$HasOnlyInput(data);
 					var tableRows = A2($elm$core$List$cons, newRow, model.tableRows);
 					return _Utils_Tuple2(
-						{input: input, newRow: newRow, request: $krisajenkins$remotedata$RemoteData$Loading, tableRows: tableRows},
-						$author$project$Main$postLLMRequest(input));
+						{input: input, llmProgress: $author$project$Main$NoLLMProgressUpdate, newRow: newRow, request: $krisajenkins$remotedata$RemoteData$Loading, tableRows: tableRows},
+						$elm$core$Platform$Cmd$batch(
+							_List_fromArray(
+								[
+									$author$project$Main$openWebSocket(webSocketClientId),
+									A2($author$project$Main$postLLMRequest, webSocketClientId, input)
+								])));
 				} else {
 					return _Utils_Tuple2(
 						_Utils_update(
@@ -6409,7 +6743,7 @@ var $author$project$Main$update = F2(
 								newRow,
 								A2($elm$core$List$drop, 1, model.tableRows));
 							return _Utils_Tuple2(
-								{input: '', newRow: $author$project$Main$NoInput, request: $krisajenkins$remotedata$RemoteData$NotAsked, tableRows: tableRows},
+								{input: '', llmProgress: $author$project$Main$NoLLMProgressUpdate, newRow: $author$project$Main$NoInput, request: $krisajenkins$remotedata$RemoteData$NotAsked, tableRows: tableRows},
 								$author$project$Main$saveTableRows(
 									$author$project$Main$encodeTableRows(tableRows)));
 						} else {
@@ -6450,19 +6784,36 @@ var $author$project$Main$update = F2(
 				} else {
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
-			default:
+			case 'SaveTableRowsToLocalStorage':
 				return _Utils_Tuple2(
 					model,
 					$author$project$Main$saveTableRows(
 						$author$project$Main$encodeTableRows(model.tableRows)));
+			default:
+				var message = msg.a;
+				var _v5 = model.request;
+				if (_v5.$ === 'Loading') {
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								llmProgress: $author$project$Main$LLMProgressUpdate(message)
+							}),
+						$elm$core$Platform$Cmd$none);
+				} else {
+					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				}
 		}
 	});
+var $elm$json$Json$Decode$value = _Json_decodeValue;
 var $author$project$Main$appName = 'Crawford\'s Recommender';
 var $elm$html$Html$div = _VirtualDom_node('div');
 var $elm$html$Html$h2 = _VirtualDom_node('h2');
 var $elm$html$Html$h3 = _VirtualDom_node('h3');
+var $elm$html$Html$h5 = _VirtualDom_node('h5');
 var $elm$virtual_dom$VirtualDom$text = _VirtualDom_text;
 var $elm$html$Html$text = $elm$virtual_dom$VirtualDom$text;
+var $elm$core$Debug$toString = _Debug_toString;
 var $author$project$Main$SendRequest = function (a) {
 	return {$: 'SendRequest', a: a};
 };
@@ -6527,78 +6878,105 @@ var $author$project$Main$viewResponseCell = function (responseText) {
 					]))
 			]));
 };
-var $author$project$Main$viewTableRow = function (tableRow) {
-	switch (tableRow.$) {
-		case 'NoInput':
-			return $elm$core$Maybe$Nothing;
-		case 'HasOnlyInput':
-			var llmRequest = tableRow.a;
-			return $elm$core$Maybe$Just(
-				A2(
-					$elm$html$Html$tr,
+var $author$project$Main$viewTableRow = F2(
+	function (llmProgress, tableRow) {
+		switch (tableRow.$) {
+			case 'NoInput':
+				return $elm$core$Maybe$Nothing;
+			case 'HasOnlyInput':
+				var llmRequest = tableRow.a;
+				return $elm$core$Maybe$Just(
+					function () {
+						if (llmProgress.$ === 'NoLLMProgressUpdate') {
+							return A2(
+								$elm$html$Html$tr,
+								_List_Nil,
+								_List_fromArray(
+									[
+										$author$project$Main$viewInputCell(llmRequest.requestText),
+										A2(
+										$elm$html$Html$td,
+										_List_Nil,
+										_List_fromArray(
+											[
+												A2($elm$html$Html$progress, _List_Nil, _List_Nil)
+											]))
+									]));
+						} else {
+							var message = llmProgress.a;
+							return A2(
+								$elm$html$Html$tr,
+								_List_Nil,
+								_List_fromArray(
+									[
+										$author$project$Main$viewInputCell(llmRequest.requestText),
+										A2(
+										$elm$html$Html$td,
+										_List_Nil,
+										_List_fromArray(
+											[
+												A2($elm$html$Html$progress, _List_Nil, _List_Nil),
+												$elm$html$Html$text(message)
+											]))
+									]));
+						}
+					}());
+			default:
+				var data = tableRow.a;
+				return $elm$core$Maybe$Just(
+					A2(
+						$elm$html$Html$tr,
+						_List_Nil,
+						_List_fromArray(
+							[
+								$author$project$Main$viewInputCell(data.requestText),
+								$author$project$Main$viewResponseCell(data.responseText)
+							])));
+		}
+	});
+var $author$project$Main$viewTableRows = F2(
+	function (llmProgress, tableRows) {
+		return A2(
+			$elm$core$List$map,
+			$author$project$Main$viewTableRow(llmProgress),
+			tableRows);
+	});
+var $author$project$Main$viewResponses = F2(
+	function (llmProgress, tableRows) {
+		return A2(
+			$elm$html$Html$table,
+			_List_Nil,
+			_List_fromArray(
+				[
+					A2(
+					$elm$html$Html$thead,
 					_List_Nil,
 					_List_fromArray(
 						[
-							$author$project$Main$viewInputCell(llmRequest.requestText),
 							A2(
-							$elm$html$Html$td,
+							$elm$html$Html$th,
 							_List_Nil,
 							_List_fromArray(
 								[
-									A2($elm$html$Html$progress, _List_Nil, _List_Nil)
+									$elm$html$Html$text('Query')
+								])),
+							A2(
+							$elm$html$Html$th,
+							_List_Nil,
+							_List_fromArray(
+								[
+									$elm$html$Html$text('Answer')
 								]))
-						])));
-		default:
-			var data = tableRow.a;
-			return $elm$core$Maybe$Just(
-				A2(
-					$elm$html$Html$tr,
+						])),
+					A2(
+					$elm$html$Html$tbody,
 					_List_Nil,
-					_List_fromArray(
-						[
-							$author$project$Main$viewInputCell(data.requestText),
-							$author$project$Main$viewResponseCell(data.responseText)
-						])));
-	}
-};
-var $author$project$Main$viewTableRows = function (tableRows) {
-	return A2($elm$core$List$map, $author$project$Main$viewTableRow, tableRows);
-};
-var $author$project$Main$viewResponses = function (tableRows) {
-	return A2(
-		$elm$html$Html$table,
-		_List_Nil,
-		_List_fromArray(
-			[
-				A2(
-				$elm$html$Html$thead,
-				_List_Nil,
-				_List_fromArray(
-					[
-						A2(
-						$elm$html$Html$th,
-						_List_Nil,
-						_List_fromArray(
-							[
-								$elm$html$Html$text('Query')
-							])),
-						A2(
-						$elm$html$Html$th,
-						_List_Nil,
-						_List_fromArray(
-							[
-								$elm$html$Html$text('Answer')
-							]))
-					])),
-				A2(
-				$elm$html$Html$tbody,
-				_List_Nil,
-				A2(
-					$elm$core$List$concatMap,
-					$author$project$Main$maybeToList,
-					$author$project$Main$viewTableRows(tableRows)))
-			]));
-};
+					A2(
+						$elm$core$List$concatMap,
+						$author$project$Main$maybeToList,
+						A2($author$project$Main$viewTableRows, llmProgress, tableRows)))
+				]));
+	});
 var $author$project$Main$decodeError = F2(
 	function (model, error) {
 		switch (error.$) {
@@ -6645,7 +7023,7 @@ var $author$project$Main$decodeError = F2(
 					_List_fromArray(
 						[
 							$elm$html$Html$text('Bad Request Body :(' + (' ' + string)),
-							$author$project$Main$viewResponses(model.tableRows)
+							A2($author$project$Main$viewResponses, model.llmProgress, model.tableRows)
 						]));
 		}
 	});
@@ -6729,7 +7107,7 @@ var $author$project$Main$viewApp = function (model) {
 							[
 								$elm$html$Html$text('Ask!')
 							])),
-						$author$project$Main$viewResponses(model.tableRows)
+						A2($author$project$Main$viewResponses, model.llmProgress, model.tableRows)
 					]));
 		case 'Failure':
 			var err = state.a;
@@ -6761,7 +7139,7 @@ var $author$project$Main$viewApp = function (model) {
 							[
 								$elm$html$Html$text('Ask!')
 							])),
-						$author$project$Main$viewResponses(model.tableRows)
+						A2($author$project$Main$viewResponses, model.llmProgress, model.tableRows)
 					]));
 		case 'Loading':
 			return A2(
@@ -6769,7 +7147,7 @@ var $author$project$Main$viewApp = function (model) {
 				_List_Nil,
 				_List_fromArray(
 					[
-						$author$project$Main$viewResponses(model.tableRows)
+						A2($author$project$Main$viewResponses, model.llmProgress, model.tableRows)
 					]));
 		default:
 			return A2(
@@ -6796,7 +7174,7 @@ var $author$project$Main$viewApp = function (model) {
 							[
 								$elm$html$Html$text('Ask!')
 							])),
-						$author$project$Main$viewResponses(model.tableRows)
+						A2($author$project$Main$viewResponses, model.llmProgress, model.tableRows)
 					]));
 	}
 };
@@ -6819,6 +7197,14 @@ var $author$project$Main$view = function (model) {
 				_List_fromArray(
 					[
 						$elm$html$Html$text('Get recommendations on Food, Wine, Travel, and more from trusted sources.')
+					])),
+				A2(
+				$elm$html$Html$h5,
+				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$text(
+						$elm$core$Debug$toString(model.llmProgress))
 					])),
 				$author$project$Main$viewApp(model)
 			]));

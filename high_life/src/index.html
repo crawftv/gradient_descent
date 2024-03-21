@@ -12,19 +12,29 @@
 </body>
 
 <script>
+
     var storedData = localStorage.getItem('tableRows');
     var flags = storedData ? JSON.parse(storedData) : null;
-
-
+<!--    let socket = new WebSocket("ws://localhost:8003/ws")-->
     const app = Elm.Main.init({
       node: document.getElementById('myapp'),
 	  flags: flags
     });
-    console.log(flags)
 
     app.ports.saveTableRows.subscribe(function(tableRows) {
-    localStorage.setItem('tableRows', JSON.stringify(tableRows));
+        localStorage.setItem('tableRows', JSON.stringify(tableRows));
     });
-    app.ports.loadTableRows.send(JSON.parse(localStorage.getItem('tableRows')));
+    app.ports.openWebSocket.subscribe(function(webSocketClientId){
+    console.log("open socket message received")
+        var socket = new WebSocket(`ws://localhost:8003/ws/${webSocketClientId}`);
+        socket.onopen = function(event) {
+            console.log('WebSocket connection established');
+    };
+        socket.onmessage("message", function(event) {
+            console.log(event.data)
+            app.ports.messageReceiver.send(event.data);
+        });
+    })
+
 </script>
 </html>
