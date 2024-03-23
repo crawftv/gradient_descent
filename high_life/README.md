@@ -7,10 +7,13 @@
 
 | Title                                             | Date Created | Not Knowing | Abandoned | Destroyed | Action | Completed |
 |---------------------------------------------------|--------------|-------------|-----------|-----------|--------|-----------|
-| Followup search                                   | 1/18         | x           |           |           |        |           |
-| Delete Row                                        | 1/19         | x           |           |           |        |           |
-| Refactor for logging                              | 1/18         |             |           |           |        | 1/19      |
-| Logging                                           | 1/18         |             |           |           |        | 1/19      |
-| Add back the query tp text box after failed query | 1/19         |             |           |           |        | 1/20      |
-| Modal for bad response                            | 1/18         |             | 1/21      |           |        |           |
-| Web sockets tracking progress                     | 1/18         |             | 1/21      |           |        |           |
+| Example Query Buttons                             | 3/22         | x           |           |           |        |           |
+| LLM Thinking                                      | 3/22         |             |           |           |        | 3/23      |
+| Query improver                                    | 3/21         | x           |           |           |        |           |
+| Followup search                                   | 3/18         | x           |           |           |        |           |
+| Delete Row                                        | 3/19         | x           |           |           |        |           |
+| Refactor for logging                              | 3/18         |             |           |           |        | 3/19      |
+| Logging                                           | 3/18         |             |           |           |        | 3/19      |
+| Add back the query to text box after failed query | 3/19         |             |           |           |        | 3/20      |
+| Modal for bad response                            | 3/18         |             | 3/21      |           |        |           |
+| Web sockets tracking progress                     | 3/18         |             | 3/21      |           |        |           |

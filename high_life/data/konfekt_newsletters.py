@@ -1,4 +1,5 @@
 konfekt_news_letters = [
+    "https://newsletter.monocle.com/t/r-e-tihkjtdy-nghdtdhuh-j/",
     "https://newsletter.monocle.com/t/r-e-tidukhtk-l-j/",
     "https://newsletter.monocle.com/t/r-e-tiiridty-l-j/",
     "https://newsletter.monocle.com/t/r-e-tijjuun-l-j/",
