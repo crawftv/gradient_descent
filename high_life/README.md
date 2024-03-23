@@ -12,6 +12,7 @@
 | Query improver                                    | 3/21         | x           |           |           |        |           |
 | Followup search                                   | 3/18         | x           |           |           |        |           |
 | Delete Row                                        | 3/19         | x           |           |           |        |           |
+| Brave Search Api                                  | 3/23         | x           |           |           |        |           |
 | Refactor for logging                              | 3/18         |             |           |           |        | 3/19      |
 | Logging                                           | 3/18         |             |           |           |        | 3/19      |
 | Add back the query to text box after failed query | 3/19         |             |           |           |        | 3/20      |
