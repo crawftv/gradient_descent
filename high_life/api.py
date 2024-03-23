@@ -1,3 +1,4 @@
+import re
 import sqlite3
 import uuid
 
@@ -62,8 +63,8 @@ prompt = PromptTemplate(""" You are the world's best recommendation bot designed
     {doc}
     ----------------------------------
     ------------Output format------------
-    Summary: Give a summary of the document with respect to the query.
-    Resolves Query: Yes/No 
+     Before answering the question, please think about it step-by-step within <thinking></thinking> tags.
+     Then, provide your final answer within <answer>Yes/No</answer> tags.
     """)
 
 accumulated_prompt = PromptTemplate("""You are the worlds best Q&A bot, specializing in synthesizing correct answers to questions.
@@ -77,9 +78,11 @@ accumulated_prompt = PromptTemplate("""You are the worlds best Q&A bot, speciali
     <<<RESPONSE INSTRUCTIONS: If the documents do not contain a suitable answer, simply respond: "i could not find a suitable answer".
     Do NOT suggest a solution from your own knowledge.
     Do NOT include phrases like 'Based on the provided documents, or 'According to the documents'. or  'based on the documents provided.'
-    Make sure to include the url from the metadata for each document in the respected answer.>>>>
-    -----------------
-    Response: [Put your response here and include your reasoning]
+    Include the url from the document metadata.
+    >>>>
+    ------------------
+    Before answering the question, please think about it step-by-step within <thinking></thinking> tags.
+    Then, provide your final answer within <answer></answer> tags.
     """)
 
 
@@ -105,11 +108,16 @@ def master_query(query_str: str, logging_id) -> str:
     _answers = []
     model = Ollama(model="mistral", temperature=0, request_timeout=500, )
     for nodes in texts.values():
-        doc = " ".join([node.get_content(metadata_mode=MetadataMode.LLM) for node in nodes])
+        doc = " ".join([node.get_content(metadata_mode=MetadataMode.NONE) for node in nodes])
         resp = model.complete(prompt.format(query_str=query_str, doc=doc))
         log_filtering_responses(logging_id, doc, resp.text)
-        if "resolves query: yes" in resp.text.lower():
-            _answers.append(nodes)
+        _answers.extend(
+            nodes
+            for i in re.finditer(
+                r"<answer>(?P<answer>.*)<\/answer>", resp.text.lower()
+            )
+            if "yes" in i.groupdict()["answer"]
+        )
     answer_content = ""
     for index, node_list in enumerate(_answers):
         _answer_content = f"Document {index}:\n"
@@ -117,12 +125,13 @@ def master_query(query_str: str, logging_id) -> str:
             _answer_content += f" {node.get_content(metadata_mode=MetadataMode.NONE)}"
         answer_content += _answer_content
     if not answer_content:
-        final_response = "I could not find a suitable answer"
-    else:
-        final_prompt = accumulated_prompt.format(
-            query_str=query_str,
-            docs=answer_content
-        )
-        final_response = Ollama(model="mistral", temperature=0.1, request_timeout=500).complete(final_prompt).text
+        return "I could not find a suitable answer"
+    final_prompt = accumulated_prompt.format(
+        query_str=query_str,
+        docs=answer_content
+    )
+    final_response = Ollama(model="mistral", temperature=0.1, request_timeout=500).complete(final_prompt).text
     log_final_responses(logging_id, final_prompt, final_response)
-    return final_response
+
+    for i in re.finditer(r"<answer>(?P<answer>.*)<\/answer>", final_response.replace("\n", " ")):
+        return i.groupdict()["answer"]
