@@ -23,9 +23,7 @@ vector_retriever = index.as_retriever(similarity_top_k=10,
 # hyde_query_engine = TransformQueryEngine(query_engine, query_transform=hyde)
 
 
-from llama_index.core.tools import FunctionTool
-
-function_tool = FunctionTool.from_defaults(fn=search)
+# function_tool = FunctionTool.from_defaults(fn=search)
 
 _high_life_prompt = """
 

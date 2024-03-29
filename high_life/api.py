@@ -1,6 +1,7 @@
 import re
 import sqlite3
 import uuid
+from urllib.parse import urlparse, urlunparse
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,6 +12,8 @@ from pydantic import BaseModel
 from starlette.responses import HTMLResponse
 from starlette.staticfiles import StaticFiles
 
+from agent_splitter import get_nodes
+from scraper import scrape_website
 from search import log_retrieval, retrieve_documents, gather_nodes_recursively
 from settings import logging_startup
 
@@ -35,6 +38,21 @@ app.add_middleware(
 async def root():
     with open("src/index.html") as f:
         return HTMLResponse(content=f.read(), status_code=200)
+
+
+@app.get("/scrape")
+def scrape_many(parent_url, save_links: bool = False):
+    if save_links == True:
+        parsed_url = urlparse(parent_url)
+        base_url = urlunparse((parsed_url.scheme, parsed_url.netloc, '', '', '', ''))
+        other_parts = urlunparse(('', '', parsed_url.path, parsed_url.params, parsed_url.query, parsed_url.fragment))
+        scrape_website(parent_url, save_links=True)
+
+
+@app.post("/add_one")
+def scrape_one(url: str):
+    get_nodes(url)
+    return {"message": "Done"}
 
 
 class Input(BaseModel):
@@ -75,14 +93,28 @@ accumulated_prompt = PromptTemplate("""You are the worlds best Q&A bot, speciali
     -----------------
     QUERY: {query_str}
     -----------------
-    <<<RESPONSE INSTRUCTIONS: If the documents do not contain a suitable answer, simply respond: "i could not find a suitable answer".
+    INSTRUCTIONS:If the documents do not contain a suitable answer, simply respond: "i could not find a suitable answer".
     Do NOT suggest a solution from your own knowledge.
     Do NOT include phrases like 'Based on the provided documents, or 'According to the documents'. or  'based on the documents provided.'
     Include the url from the document metadata.
-    >>>>
     ------------------
     Before answering the question, please think about it step-by-step within <thinking></thinking> tags.
     Then, provide your final answer within <answer></answer> tags.
+    EXAMPLES of  THOUGHT PROCESS:
+    <examples>
+    <example 1>
+        Query: What is there do in [city]?
+        <thinking>
+        The query is specifically asking for activities to do in [city]. 
+        Looking through the provided knowledge base, Document [x] discusses [activity], 
+        with specific mention of [city]. 
+        Document [y] describes a place to vist in [city] 
+        <thinking>
+        <answer>
+        ...
+        </answer>
+    <\example 1>
+    <\examples>
     """)
 
 
@@ -118,12 +150,14 @@ def master_query(query_str: str, logging_id) -> str:
             )
             if "yes" in i.groupdict()["answer"]
         )
-    answer_content = ""
+    answer_content = "<documents>"
     for index, node_list in enumerate(_answers):
-        _answer_content = f"Document {index}:\n"
+        _answer_content = f"\n<document {index}:\n"
         for node in node_list:
             _answer_content += f" {node.get_content(metadata_mode=MetadataMode.NONE)}"
-        answer_content += _answer_content
+
+        answer_content += f"{_answer_content}\n<\document {index}>"
+    answer_content += "\n<\documents>"
     if not answer_content:
         return "I could not find a suitable answer"
     final_prompt = accumulated_prompt.format(
@@ -135,3 +169,7 @@ def master_query(query_str: str, logging_id) -> str:
 
     for i in re.finditer(r"<answer>(?P<answer>.*)<\/answer>", final_response.replace("\n", " ")):
         return i.groupdict()["answer"]
+
+
+if __name__ == "__main__":
+    master_query("ACtivities in Rome", uuid.uuid4().hex)
