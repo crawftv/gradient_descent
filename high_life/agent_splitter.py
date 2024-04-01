@@ -97,6 +97,8 @@ def white_space_cleaner(text):
 
 
 def get_nodes(url):
+    if len(chroma_collection.get(where={"url": url})["documents"]) > 0:
+        return
     if urllib3.util.parse_url(url).hostname == "www.instagram.com":
         return nodes_from_instagram(url)
     return nodes_from_html(url)
@@ -111,7 +113,8 @@ def nodes_from_instagram(url):
     parent_document = TextNode(
         text=" ".join(contents),
         metadata={
-            "text_hash": hex_id(contents),
+            "text_hash": hex_id(contents[0]),
+            "url": url
         })
     for content in contents:
         result = list(re.finditer(r"(?P<Title> (?P<author>.*) on Instagram): ", content))[0]
@@ -126,6 +129,7 @@ def nodes_from_instagram(url):
                     "text_hash": text_hash,
                     "title": title,
                     "author": author,
+                    "url": url
                 })
             new_node.excluded_llm_metadata_keys = ["url", "text_hash"]
             new_node.excluded_embed_metadata_keys = ["url", "text_hash"]

@@ -6500,7 +6500,9 @@ var $author$project$Main$viewInputCell = function (input) {
 				$elm$html$Html$text(input)
 			]));
 };
-var $elm$html$Html$p = _VirtualDom_node('p');
+var $elm$html$Html$pre = _VirtualDom_node('pre');
+var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
+var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
 var $elm$html$Html$Attributes$stringProperty = F2(
 	function (key, string) {
 		return A2(
@@ -6516,10 +6518,11 @@ var $author$project$Main$viewResponseCell = function (responseText) {
 		_List_fromArray(
 			[
 				A2(
-				$elm$html$Html$p,
+				$elm$html$Html$pre,
 				_List_fromArray(
 					[
-						$elm$html$Html$Attributes$wrap('hard')
+						$elm$html$Html$Attributes$wrap('hard'),
+						A2($elm$html$Html$Attributes$style, 'font-family', 'inherit')
 					]),
 				_List_fromArray(
 					[
