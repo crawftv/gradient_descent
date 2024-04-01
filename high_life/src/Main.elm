@@ -2,7 +2,7 @@ port module Main exposing (..)
 
 import Browser
 import Html exposing (..)
-import Html.Attributes exposing (value, wrap)
+import Html.Attributes exposing (style, value, wrap)
 import Html.Events exposing (..)
 import Http
 import Json.Decode as Decode
@@ -201,7 +201,17 @@ viewInputCell input =
 
 viewResponseCell : ResponseText -> Html Msg
 viewResponseCell responseText =
-    td [] [ p [ wrap "hard" ] [ text responseText ] ]
+    td []
+        [ pre
+            [ wrap "hard"
+
+            --, style "margin" "1em 0"
+            --, style "font-size" "1em"
+            --, style "line-height" "1.5"
+            , style "font-family" "inherit"
+            ]
+            [ text responseText ]
+        ]
 
 
 viewTableRow : TableRow -> Maybe (Html Msg)

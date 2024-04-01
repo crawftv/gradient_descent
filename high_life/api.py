@@ -3,6 +3,7 @@ import sqlite3
 import uuid
 from urllib.parse import urlparse, urlunparse
 
+from bs4 import BeautifulSoup
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from llama_index.core import PromptTemplate
@@ -98,23 +99,21 @@ accumulated_prompt = PromptTemplate("""You are the worlds best Q&A bot, speciali
     Do NOT include phrases like 'Based on the provided documents, or 'According to the documents'. or  'based on the documents provided.'
     Include the url from the document metadata.
     ------------------
-    Before answering the question, please think about it step-by-step within <thinking></thinking> tags.
-    Then, provide your final answer within <answer></answer> tags.
+    Before answering the question, please think about it step-by-step within a <thinking></thinking> xml tag.
+    Then, provide your final answer within <answer></answer> xml tag
+    In the thinking steps, discuss the relevance of the content without mentioning document numbers.
+    If you want to cite a source, consider using the author's name or the platform instead of the document number. For example: "According to @claire_rose on Instagram,..."
     EXAMPLES of  THOUGHT PROCESS:
     <examples>
     <example 1>
-        Query: What is there do in [city]?
-        <thinking>
-        The query is specifically asking for activities to do in [city]. 
-        Looking through the provided knowledge base, Document [x] discusses [activity], 
-        with specific mention of [city]. 
-        Document [y] describes a place to vist in [city] 
-        <thinking>
+        Query: seafood restaurant in Paris?
+        <thinking> The query asks for seafood restaurant recommendations in Paris. The provided information includes several relevant suggestions, such as a highly-regarded fish restaurant where everything is prepared exquisitely, and a top seafood spot in the city. Other details discuss wine pairings with seafood in general, which is less directly relevant to the specific query. 
+        </thinking>
         <answer>
         ...
         </answer>
-    <\example 1>
-    <\examples>
+    </example 1>
+    </examples>
     """)
 
 
@@ -140,13 +139,13 @@ def master_query(query_str: str, logging_id) -> str:
     _answers = []
     model = Ollama(model="mistral", temperature=0, request_timeout=500, )
     for nodes in texts.values():
-        doc = " ".join([node.get_content(metadata_mode=MetadataMode.NONE) for node in nodes])
+        doc = " ".join([node.get_content(metadata_mode=MetadataMode.LLM) for node in nodes])
         resp = model.complete(prompt.format(query_str=query_str, doc=doc))
         log_filtering_responses(logging_id, doc, resp.text)
         _answers.extend(
             nodes
             for i in re.finditer(
-                r"<answer>(?P<answer>.*)<\/answer>", resp.text.lower()
+                r"<answer>(?P<answer>.*)</answer>", resp.text.lower()
             )
             if "yes" in i.groupdict()["answer"]
         )
@@ -154,10 +153,10 @@ def master_query(query_str: str, logging_id) -> str:
     for index, node_list in enumerate(_answers):
         _answer_content = f"\n<document {index}:\n"
         for node in node_list:
-            _answer_content += f" {node.get_content(metadata_mode=MetadataMode.NONE)}"
+            _answer_content += f" {node.get_content(metadata_mode=MetadataMode.LLM)}"
 
-        answer_content += f"{_answer_content}\n<\document {index}>"
-    answer_content += "\n<\documents>"
+        answer_content += f"{_answer_content}\n</document {index}>"
+    answer_content += "\n</documents>"
     if not answer_content:
         return "I could not find a suitable answer"
     final_prompt = accumulated_prompt.format(
@@ -166,9 +165,8 @@ def master_query(query_str: str, logging_id) -> str:
     )
     final_response = Ollama(model="mistral", temperature=0.1, request_timeout=500).complete(final_prompt).text
     log_final_responses(logging_id, final_prompt, final_response)
-
-    for i in re.finditer(r"<answer>(?P<answer>.*)<\/answer>", final_response.replace("\n", " ")):
-        return i.groupdict()["answer"]
+    xml = BeautifulSoup(f"<response>{final_response}</response>", 'lxml-xml')
+    return xml.find("answer").text
 
 
 if __name__ == "__main__":
