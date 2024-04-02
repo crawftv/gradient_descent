@@ -6363,6 +6363,132 @@ var $author$project$Main$postLLMRequest = function (input) {
 		$author$project$Main$encodeRequest(input));
 };
 var $author$project$Main$saveTableRows = _Platform_outgoingPort('saveTableRows', $elm$core$Basics$identity);
+var $elm$core$List$takeReverse = F3(
+	function (n, list, kept) {
+		takeReverse:
+		while (true) {
+			if (n <= 0) {
+				return kept;
+			} else {
+				if (!list.b) {
+					return kept;
+				} else {
+					var x = list.a;
+					var xs = list.b;
+					var $temp$n = n - 1,
+						$temp$list = xs,
+						$temp$kept = A2($elm$core$List$cons, x, kept);
+					n = $temp$n;
+					list = $temp$list;
+					kept = $temp$kept;
+					continue takeReverse;
+				}
+			}
+		}
+	});
+var $elm$core$List$takeTailRec = F2(
+	function (n, list) {
+		return $elm$core$List$reverse(
+			A3($elm$core$List$takeReverse, n, list, _List_Nil));
+	});
+var $elm$core$List$takeFast = F3(
+	function (ctr, n, list) {
+		if (n <= 0) {
+			return _List_Nil;
+		} else {
+			var _v0 = _Utils_Tuple2(n, list);
+			_v0$1:
+			while (true) {
+				_v0$5:
+				while (true) {
+					if (!_v0.b.b) {
+						return list;
+					} else {
+						if (_v0.b.b.b) {
+							switch (_v0.a) {
+								case 1:
+									break _v0$1;
+								case 2:
+									var _v2 = _v0.b;
+									var x = _v2.a;
+									var _v3 = _v2.b;
+									var y = _v3.a;
+									return _List_fromArray(
+										[x, y]);
+								case 3:
+									if (_v0.b.b.b.b) {
+										var _v4 = _v0.b;
+										var x = _v4.a;
+										var _v5 = _v4.b;
+										var y = _v5.a;
+										var _v6 = _v5.b;
+										var z = _v6.a;
+										return _List_fromArray(
+											[x, y, z]);
+									} else {
+										break _v0$5;
+									}
+								default:
+									if (_v0.b.b.b.b && _v0.b.b.b.b.b) {
+										var _v7 = _v0.b;
+										var x = _v7.a;
+										var _v8 = _v7.b;
+										var y = _v8.a;
+										var _v9 = _v8.b;
+										var z = _v9.a;
+										var _v10 = _v9.b;
+										var w = _v10.a;
+										var tl = _v10.b;
+										return (ctr > 1000) ? A2(
+											$elm$core$List$cons,
+											x,
+											A2(
+												$elm$core$List$cons,
+												y,
+												A2(
+													$elm$core$List$cons,
+													z,
+													A2(
+														$elm$core$List$cons,
+														w,
+														A2($elm$core$List$takeTailRec, n - 4, tl))))) : A2(
+											$elm$core$List$cons,
+											x,
+											A2(
+												$elm$core$List$cons,
+												y,
+												A2(
+													$elm$core$List$cons,
+													z,
+													A2(
+														$elm$core$List$cons,
+														w,
+														A3($elm$core$List$takeFast, ctr + 1, n - 4, tl)))));
+									} else {
+										break _v0$5;
+									}
+							}
+						} else {
+							if (_v0.a === 1) {
+								break _v0$1;
+							} else {
+								break _v0$5;
+							}
+						}
+					}
+				}
+				return list;
+			}
+			var _v1 = _v0.b;
+			var x = _v1.a;
+			return _List_fromArray(
+				[x]);
+		}
+	});
+var $elm$core$List$take = F2(
+	function (n, list) {
+		return A3($elm$core$List$takeFast, 0, n, list);
+	});
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
@@ -6450,11 +6576,22 @@ var $author$project$Main$update = F2(
 				} else {
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				}
-			default:
+			case 'SaveTableRowsToLocalStorage':
 				return _Utils_Tuple2(
 					model,
 					$author$project$Main$saveTableRows(
 						$author$project$Main$encodeTableRows(model.tableRows)));
+			default:
+				var index = msg.a;
+				var tableRows = _Utils_ap(
+					A2($elm$core$List$take, index, model.tableRows),
+					A2($elm$core$List$drop, index + 1, model.tableRows));
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{tableRows: tableRows}),
+					$author$project$Main$saveTableRows(
+						$author$project$Main$encodeTableRows(tableRows)));
 		}
 	});
 var $author$project$Main$appName = 'Crawford\'s Recommender';
@@ -6488,6 +6625,26 @@ var $elm$html$Html$table = _VirtualDom_node('table');
 var $elm$html$Html$tbody = _VirtualDom_node('tbody');
 var $elm$html$Html$th = _VirtualDom_node('th');
 var $elm$html$Html$thead = _VirtualDom_node('thead');
+var $author$project$Main$DeleteRow = function (a) {
+	return {$: 'DeleteRow', a: a};
+};
+var $elm$virtual_dom$VirtualDom$Normal = function (a) {
+	return {$: 'Normal', a: a};
+};
+var $elm$virtual_dom$VirtualDom$on = _VirtualDom_on;
+var $elm$html$Html$Events$on = F2(
+	function (event, decoder) {
+		return A2(
+			$elm$virtual_dom$VirtualDom$on,
+			event,
+			$elm$virtual_dom$VirtualDom$Normal(decoder));
+	});
+var $elm$html$Html$Events$onClick = function (msg) {
+	return A2(
+		$elm$html$Html$Events$on,
+		'click',
+		$elm$json$Json$Decode$succeed(msg));
+};
 var $elm$html$Html$progress = _VirtualDom_node('progress');
 var $elm$html$Html$td = _VirtualDom_node('td');
 var $elm$html$Html$tr = _VirtualDom_node('tr');
@@ -6530,42 +6687,60 @@ var $author$project$Main$viewResponseCell = function (responseText) {
 					]))
 			]));
 };
-var $author$project$Main$viewTableRow = function (tableRow) {
-	switch (tableRow.$) {
-		case 'NoInput':
-			return $elm$core$Maybe$Nothing;
-		case 'HasOnlyInput':
-			var llmRequest = tableRow.a;
-			return $elm$core$Maybe$Just(
-				A2(
-					$elm$html$Html$tr,
-					_List_Nil,
-					_List_fromArray(
-						[
-							$author$project$Main$viewInputCell(llmRequest.requestText),
-							A2(
-							$elm$html$Html$td,
-							_List_Nil,
-							_List_fromArray(
-								[
-									A2($elm$html$Html$progress, _List_Nil, _List_Nil)
-								]))
-						])));
-		default:
-			var data = tableRow.a;
-			return $elm$core$Maybe$Just(
-				A2(
-					$elm$html$Html$tr,
-					_List_Nil,
-					_List_fromArray(
-						[
-							$author$project$Main$viewInputCell(data.requestText),
-							$author$project$Main$viewResponseCell(data.responseText)
-						])));
-	}
-};
+var $author$project$Main$viewTableRow = F2(
+	function (index, tableRow) {
+		switch (tableRow.$) {
+			case 'NoInput':
+				return $elm$core$Maybe$Nothing;
+			case 'HasOnlyInput':
+				var llmRequest = tableRow.a;
+				return $elm$core$Maybe$Just(
+					A2(
+						$elm$html$Html$tr,
+						_List_Nil,
+						_List_fromArray(
+							[
+								$author$project$Main$viewInputCell(llmRequest.requestText),
+								A2(
+								$elm$html$Html$td,
+								_List_Nil,
+								_List_fromArray(
+									[
+										A2($elm$html$Html$progress, _List_Nil, _List_Nil)
+									]))
+							])));
+			default:
+				var data = tableRow.a;
+				return $elm$core$Maybe$Just(
+					A2(
+						$elm$html$Html$tr,
+						_List_Nil,
+						_List_fromArray(
+							[
+								A2(
+								$elm$html$Html$td,
+								_List_Nil,
+								_List_fromArray(
+									[
+										A2(
+										$elm$html$Html$button,
+										_List_fromArray(
+											[
+												$elm$html$Html$Events$onClick(
+												$author$project$Main$DeleteRow(index))
+											]),
+										_List_fromArray(
+											[
+												$elm$html$Html$text('Delete')
+											]))
+									])),
+								$author$project$Main$viewInputCell(data.requestText),
+								$author$project$Main$viewResponseCell(data.responseText)
+							])));
+		}
+	});
 var $author$project$Main$viewTableRows = function (tableRows) {
-	return A2($elm$core$List$map, $author$project$Main$viewTableRow, tableRows);
+	return A2($elm$core$List$indexedMap, $author$project$Main$viewTableRow, tableRows);
 };
 var $author$project$Main$viewResponses = function (tableRows) {
 	return A2(
@@ -6654,23 +6829,6 @@ var $author$project$Main$decodeError = F2(
 	});
 var $elm$html$Html$input = _VirtualDom_node('input');
 var $elm$html$Html$Attributes$name = $elm$html$Html$Attributes$stringProperty('name');
-var $elm$virtual_dom$VirtualDom$Normal = function (a) {
-	return {$: 'Normal', a: a};
-};
-var $elm$virtual_dom$VirtualDom$on = _VirtualDom_on;
-var $elm$html$Html$Events$on = F2(
-	function (event, decoder) {
-		return A2(
-			$elm$virtual_dom$VirtualDom$on,
-			event,
-			$elm$virtual_dom$VirtualDom$Normal(decoder));
-	});
-var $elm$html$Html$Events$onClick = function (msg) {
-	return A2(
-		$elm$html$Html$Events$on,
-		'click',
-		$elm$json$Json$Decode$succeed(msg));
-};
 var $elm$html$Html$Events$alwaysStop = function (x) {
 	return _Utils_Tuple2(x, true);
 };
