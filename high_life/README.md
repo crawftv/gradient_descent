@@ -5,16 +5,16 @@
     2. https://marcopoloselections.com/search?type=product&q=+Gr%C3%BCner+Veltliner+
     3. https://www.totalwine.com/search/all?text=gruner
 
-| Title                                             | Date Created | Not Knowing | Abandoned | Destroyed | Action | Completed |
-|---------------------------------------------------|--------------|-------------|-----------|-----------|--------|-----------|
-| Example Query Buttons                             | 3/22         | x           |           |           |        |           |
-| Followup search                                   | 3/18         | x           |           |           |        |           |
-| Brave Search Api                                  | 3/23         | x           |           |           |        |           |
-| Refactor for logging                              | 3/18         |             |           |           |        | 3/19      |
-| Logging                                           | 3/18         |             |           |           |        | 3/19      |
-| Add back the query to text box after failed query | 3/19         |             |           |           |        | 3/20      |
-| Modal for bad response                            | 3/18         |             | 3/21      |           |        |           |
-| Web sockets tracking progress                     | 3/18         |             | 3/21      |           |        |           |
-| LLM Thinking                                      | 3/22         |             |           |           |        | 3/23      |
-| Query improver                                    | 3/21         |             | x         |           |        |           |
-| Delete Row                                        | 3/19         |             |           |           | 4/2    |           |
+| Title                                             | Date Created | Not Knowing | Abandoned                   | Destroyed | Action | Completed |
+|---------------------------------------------------|--------------|-------------|-----------------------------|-----------|--------|-----------|
+| Example Query Buttons                             | 3/22         | x           |                             |           |        |           |
+| Followup search                                   | 3/18         | x           |                             |           |        |           |
+| Brave Search Api                                  | 3/23         |             | bravesearchdocs not working |           |        |           |
+| Refactor for logging                              | 3/18         |             |                             |           |        | 3/19      |
+| Logging                                           | 3/18         |             |                             |           |        | 3/19      |
+| Add back the query to text box after failed query | 3/19         |             |                             |           |        | 3/20      |
+| Modal for bad response                            | 3/18         |             | 3/21                        |           |        |           |
+| Web sockets tracking progress                     | 3/18         |             | 3/21                        |           |        |           |
+| LLM Thinking                                      | 3/22         |             |                             |           |        | 3/23      |
+| Query improver                                    | 3/21         |             | x                           |           |        |           |
+| Delete Row                                        | 3/19         |             |                             |           | 4/2    |           |

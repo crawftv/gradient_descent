@@ -211,7 +211,7 @@ viewResponseCell : ResponseText -> Html Msg
 viewResponseCell responseText =
     td []
         [ pre
-            [ wrap "hard"
+            [ style "white-space" "pre-wrap"
             , style "font-family" "inherit"
             ]
             [ text responseText ]
@@ -268,12 +268,18 @@ filterRow tableRow =
             []
 
 
+thStyling : List (Attribute msg)
+thStyling =
+    [ style "text-align" "left" ]
+
+
 viewResponses : TableRows -> Html Msg
 viewResponses tableRows =
     table []
         [ thead []
-            [ th [] [ text "Query" ]
-            , th [] [ text "Answer" ]
+            [ th [] []
+            , th thStyling [ text "Query" ]
+            , th thStyling [ text "Answer" ]
             ]
         , tbody [] <| List.concatMap maybeToList (viewTableRows tableRows)
         ]

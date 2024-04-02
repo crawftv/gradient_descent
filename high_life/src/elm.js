@@ -6624,6 +6624,12 @@ var $author$project$Main$maybeToList = function (m) {
 var $elm$html$Html$table = _VirtualDom_node('table');
 var $elm$html$Html$tbody = _VirtualDom_node('tbody');
 var $elm$html$Html$th = _VirtualDom_node('th');
+var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
+var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
+var $author$project$Main$thStyling = _List_fromArray(
+	[
+		A2($elm$html$Html$Attributes$style, 'text-align', 'left')
+	]);
 var $elm$html$Html$thead = _VirtualDom_node('thead');
 var $author$project$Main$DeleteRow = function (a) {
 	return {$: 'DeleteRow', a: a};
@@ -6658,16 +6664,6 @@ var $author$project$Main$viewInputCell = function (input) {
 			]));
 };
 var $elm$html$Html$pre = _VirtualDom_node('pre');
-var $elm$virtual_dom$VirtualDom$style = _VirtualDom_style;
-var $elm$html$Html$Attributes$style = $elm$virtual_dom$VirtualDom$style;
-var $elm$html$Html$Attributes$stringProperty = F2(
-	function (key, string) {
-		return A2(
-			_VirtualDom_property,
-			key,
-			$elm$json$Json$Encode$string(string));
-	});
-var $elm$html$Html$Attributes$wrap = $elm$html$Html$Attributes$stringProperty('wrap');
 var $author$project$Main$viewResponseCell = function (responseText) {
 	return A2(
 		$elm$html$Html$td,
@@ -6678,7 +6674,7 @@ var $author$project$Main$viewResponseCell = function (responseText) {
 				$elm$html$Html$pre,
 				_List_fromArray(
 					[
-						$elm$html$Html$Attributes$wrap('hard'),
+						A2($elm$html$Html$Attributes$style, 'white-space', 'pre-wrap'),
 						A2($elm$html$Html$Attributes$style, 'font-family', 'inherit')
 					]),
 				_List_fromArray(
@@ -6753,16 +6749,17 @@ var $author$project$Main$viewResponses = function (tableRows) {
 				_List_Nil,
 				_List_fromArray(
 					[
+						A2($elm$html$Html$th, _List_Nil, _List_Nil),
 						A2(
 						$elm$html$Html$th,
-						_List_Nil,
+						$author$project$Main$thStyling,
 						_List_fromArray(
 							[
 								$elm$html$Html$text('Query')
 							])),
 						A2(
 						$elm$html$Html$th,
-						_List_Nil,
+						$author$project$Main$thStyling,
 						_List_fromArray(
 							[
 								$elm$html$Html$text('Answer')
@@ -6828,6 +6825,13 @@ var $author$project$Main$decodeError = F2(
 		}
 	});
 var $elm$html$Html$input = _VirtualDom_node('input');
+var $elm$html$Html$Attributes$stringProperty = F2(
+	function (key, string) {
+		return A2(
+			_VirtualDom_property,
+			key,
+			$elm$json$Json$Encode$string(string));
+	});
 var $elm$html$Html$Attributes$name = $elm$html$Html$Attributes$stringProperty('name');
 var $elm$html$Html$Events$alwaysStop = function (x) {
 	return _Utils_Tuple2(x, true);
