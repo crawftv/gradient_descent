@@ -106,6 +106,7 @@ type Msg
     | UseResponseToUpdateModel (WebData LLMResponse)
     | LoadTableRowsFromLocalStorage Json.Encode.Value
     | SaveTableRowsToLocalStorage
+    | DeleteRow Int
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -175,6 +176,13 @@ update msg model =
         SaveTableRowsToLocalStorage ->
             ( model, saveTableRows <| encodeTableRows model.tableRows )
 
+        DeleteRow index ->
+            let
+                tableRows =
+                    List.take index model.tableRows ++ List.drop (index + 1) model.tableRows
+            in
+            ( { model | tableRows = tableRows }, saveTableRows <| encodeTableRows tableRows )
+
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
@@ -204,18 +212,14 @@ viewResponseCell responseText =
     td []
         [ pre
             [ wrap "hard"
-
-            --, style "margin" "1em 0"
-            --, style "font-size" "1em"
-            --, style "line-height" "1.5"
             , style "font-family" "inherit"
             ]
             [ text responseText ]
         ]
 
 
-viewTableRow : TableRow -> Maybe (Html Msg)
-viewTableRow tableRow =
+viewTableRow : Int -> TableRow -> Maybe (Html Msg)
+viewTableRow index tableRow =
     case tableRow of
         NoInput ->
             Nothing
@@ -230,14 +234,18 @@ viewTableRow tableRow =
         HasAllData data ->
             Just <|
                 tr []
-                    [ viewInputCell data.requestText
+                    [ td []
+                        [ button [ onClick (DeleteRow index) ]
+                            [ text "Delete" ]
+                        ]
+                    , viewInputCell data.requestText
                     , viewResponseCell data.responseText
                     ]
 
 
 viewTableRows : TableRows -> List (Maybe (Html Msg))
 viewTableRows tableRows =
-    List.map viewTableRow tableRows
+    List.indexedMap viewTableRow tableRows
 
 
 maybeToList : Maybe a -> List a
@@ -384,7 +392,7 @@ decodeError model error =
 port loadTableRows : (Json.Encode.Value -> msg) -> Sub msg
 
 
-port sendloadTableRowsMsg : () -> Cmd msg
+port sendLoadTableRowsMsg : () -> Cmd msg
 
 
 port saveTableRows : Json.Encode.Value -> Cmd msg
