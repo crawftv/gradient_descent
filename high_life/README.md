@@ -9,7 +9,6 @@
 |---------------------------------------------------|--------------|-------------|-----------|-----------|--------|-----------|
 | Example Query Buttons                             | 3/22         | x           |           |           |        |           |
 | Followup search                                   | 3/18         | x           |           |           |        |           |
-| Delete Row                                        | 3/19         | x           |           |           |        |           |
 | Brave Search Api                                  | 3/23         | x           |           |           |        |           |
 | Refactor for logging                              | 3/18         |             |           |           |        | 3/19      |
 | Logging                                           | 3/18         |             |           |           |        | 3/19      |
@@ -18,3 +17,4 @@
 | Web sockets tracking progress                     | 3/18         |             | 3/21      |           |        |           |
 | LLM Thinking                                      | 3/22         |             |           |           |        | 3/23      |
 | Query improver                                    | 3/21         |             | x         |           |        |           |
+| Delete Row                                        | 3/19         |             |           |           | 4/2    |           |
