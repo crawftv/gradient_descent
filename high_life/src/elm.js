@@ -6696,6 +6696,13 @@ var $author$project$Main$viewTableRow = F2(
 						_List_Nil,
 						_List_fromArray(
 							[
+								A2(
+								$elm$html$Html$td,
+								_List_Nil,
+								_List_fromArray(
+									[
+										$elm$html$Html$text('')
+									])),
 								$author$project$Main$viewInputCell(llmRequest.requestText),
 								A2(
 								$elm$html$Html$td,

@@ -7,9 +7,9 @@ from bs4 import BeautifulSoup, Tag
 from llama_index.core.schema import TextNode, NodeRelationship, RelatedNodeInfo, Document
 from llama_index.core.vector_stores.utils import metadata_dict_to_node
 
-from high_life_agent import index
 from propisitional_splitter import propositional_splitter
-from settings import Settings, chroma_collection, hex_id
+from search import index
+from settings import chroma_collection, Settings, hex_id
 
 Settings
 
@@ -97,8 +97,8 @@ def white_space_cleaner(text):
 
 
 def get_nodes(url):
-    if len(chroma_collection.get(where={"url": url})["documents"]) > 0:
-        return
+    # if len(chroma_collection.get(where={"url": url})["documents"]) > 0:
+    #     return
     if urllib3.util.parse_url(url).hostname == "www.instagram.com":
         return nodes_from_instagram(url)
     return nodes_from_html(url)
@@ -206,14 +206,14 @@ def nodes_from_html(url, chunking_agent_llm=None):
                         text=sub_text_text,
                         metadata={
                             "text_hash": text_hash,
-                            "h1": strip_text(parent.chunk.h1.text)
-                            if parent.chunk.h1
+                            "h1": strip_text(parent.h1.text)
+                            if parent.h1
                             else None,
-                            "h2": strip_text(parent.chunk.h2.text)
-                            if parent.chunk.h2
+                            "h2": strip_text(parent.h2.text)
+                            if parent.h2
                             else None,
-                            "h3": strip_text(parent.chunk.h3.text)
-                            if parent.chunk.h3
+                            "h3": strip_text(parent.h3.text)
+                            if parent.h3
                             else None,
                             "url": request.url,
                             "Parent Document Summary": summary,
@@ -237,7 +237,7 @@ def nodes_from_html(url, chunking_agent_llm=None):
 
 
 if __name__ == "__main__":
-    nodes = nodes_from_instagram("https://www.instagram.com/p/C2zergot2im/?img_index=1")
+    nodes = nodes_from_html("https://newsletter.monocle.com/t/r-e-tikhurlt-nghdtdhuh-j/")
     nodes
     # for url in tqdm(konfekt_newsletters.konfekt_news_letters):
     #     nodes_from_html(url)

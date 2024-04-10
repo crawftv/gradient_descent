@@ -3,7 +3,7 @@ from llama_index.core.agent import ReActAgent, ReActChatFormatter
 from llama_index.core.indices import VectorStoreIndex
 from llama_index.core.postprocessor import LLMRerank
 
-from settings import vector_store, storage_context
+from high_life.settings import vector_store, storage_context
 
 index = VectorStoreIndex.from_vector_store(vector_store, storage_context=storage_context)
 

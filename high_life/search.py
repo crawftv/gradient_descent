@@ -18,6 +18,7 @@ hyde_vector_retriever = index.as_retriever(similarity_top_k=20,
                                                    top_n=2,
                                                ),
                                            ],
+                                           vector_store_query_mode="hybrid",
                                            query_transform=HyDEQueryTransform(include_original=True, )
                                            )
 
@@ -70,7 +71,7 @@ def gather_nodes_recursively(docs: list[NodeWithScore]) -> dict[str, list[BaseNo
                 contents[parent_node.node_id] = [retrieved_parent_node]
                 continue
         if previous_nodes := traverse_nodes(
-            new_node, NodeRelationship.PREVIOUS
+                new_node, NodeRelationship.PREVIOUS
         ):
             new_node = previous_nodes[-1]
         _contents = [new_node] + traverse_nodes(new_node, NodeRelationship.NEXT)

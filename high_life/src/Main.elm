@@ -227,7 +227,8 @@ viewTableRow index tableRow =
         HasOnlyInput llmRequest ->
             Just <|
                 tr []
-                    [ viewInputCell llmRequest.requestText
+                    [ td [] [ text "" ]
+                    , viewInputCell llmRequest.requestText
                     , td [] [ progress [] [] ]
                     ]
 

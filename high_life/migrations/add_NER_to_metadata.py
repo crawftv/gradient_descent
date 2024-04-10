@@ -39,7 +39,7 @@ def get_NER(query_str):
     """)
 
     prompt_template = prompt_template.partial_format(labels=", ".join(labels))
-    model = Ollama(model="mistral", temperature=0.1)
+    model = Ollama(model="mistral", temperature=0.1, timeout=500)
     prompt = prompt_template.format(query_str=query_str)
     return model.complete(prompt).text
 
