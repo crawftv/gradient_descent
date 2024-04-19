@@ -186,14 +186,11 @@ def master_query(query_str: str, logging_id) -> str:
         query_str=query_str,
         docs=answer_content
     )
-    final_response = Ollama(model="vicuna:7b-16k", request_timeout=500).complete(final_prompt).text
-    # final_response = Llamafile(temperature=0.1, seed=0).complete(final_prompt).text
-
+    final_response = Ollama(model="mistral", request_timeout=500).complete(final_prompt).text
     # final_response = anthropic_call(final_prompt)
     log_final_responses(logging_id, final_prompt, final_response)
     xml = BeautifulSoup(f"<response>{final_response}</response>", 'lxml-xml')
-    answer = xml.find("answer").text
-    return answer
+    return resp.text if (resp := xml.find("answer")) else "I could not find a suitable answer"
 
 
 def anthropic_call(text) -> str:

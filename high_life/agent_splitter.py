@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup, Tag
 from llama_index.core.schema import TextNode, NodeRelationship, RelatedNodeInfo, Document
 from llama_index.core.vector_stores.utils import metadata_dict_to_node
 
-from propisitional_splitter import propositional_splitter
+from instagram_util import filter_instagram_by_url
 from search import index
 from settings import chroma_collection, Settings, hex_id
 
@@ -100,44 +100,8 @@ def get_nodes(url):
     # if len(chroma_collection.get(where={"url": url})["documents"]) > 0:
     #     return
     if urllib3.util.parse_url(url).hostname == "www.instagram.com":
-        return nodes_from_instagram(url)
+        return filter_instagram_by_url(url)
     return nodes_from_html(url)
-
-
-def nodes_from_instagram(url):
-    text = requests.get(url).text
-    xml = BeautifulSoup(text, 'lxml-xml')
-
-    contents = [i.attrs["content"] for i in xml.find_all("meta") if i.attrs.get("property") == "og:title"]
-    nodes: list[TextNode] = []
-    parent_document = TextNode(
-        text=" ".join(contents),
-        metadata={
-            "text_hash": hex_id(contents[0]),
-            "url": url
-        })
-    for content in contents:
-        result = list(re.finditer(r"(?P<Title> (?P<author>.*) on Instagram): ", content))[0]
-        title = result.groupdict()["Title"]
-        author = result.groupdict()["author"]
-        propositions = propositional_splitter(content)
-        for proposition in propositions:
-            text_hash = hex_id(proposition)
-            new_node = TextNode(
-                text=proposition,
-                metadata={
-                    "text_hash": text_hash,
-                    "title": title,
-                    "author": author,
-                    "url": url
-                })
-            new_node.excluded_llm_metadata_keys = ["url", "text_hash"]
-            new_node.excluded_embed_metadata_keys = ["url", "text_hash"]
-            new_node.relationships[NodeRelationship.PARENT] = RelatedNodeInfo(node_id=parent_document.node_id)
-            parent_document.relationships[NodeRelationship.CHILD] = RelatedNodeInfo(node_id=new_node.node_id)
-            nodes.append(new_node)
-    nodes.append(parent_document)
-    index.insert_nodes(nodes)
 
 
 def nodes_from_html(url, chunking_agent_llm=None):
