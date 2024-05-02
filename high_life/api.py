@@ -7,7 +7,8 @@ from anthropic import Anthropic
 from bs4 import BeautifulSoup
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from llama_index.core import PromptTemplate, VectorStoreIndex
+from llama_index.core import PromptTemplate
+from llama_index.core import VectorStoreIndex
 from llama_index.core.schema import MetadataMode
 from llama_index.llms.ollama import Ollama
 from pydantic import BaseModel
