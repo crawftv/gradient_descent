@@ -19,7 +19,8 @@ hyde_vector_retriever = index.as_retriever(similarity_top_k=20,
                                                ),
                                            ],
                                            vector_store_query_mode="hybrid",
-                                           query_transform=HyDEQueryTransform(include_original=True, )
+                                           query_transform=HyDEQueryTransform(
+                                               include_original=True, )
                                            )
 
 

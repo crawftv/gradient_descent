@@ -18,13 +18,13 @@ from starlette.staticfiles import StaticFiles
 from agent_splitter import get_nodes
 from prompts import accumulated_prompt
 from scraper import scrape_website
-from search import log_retrieval, retrieve_documents, gather_nodes_recursively
+from search import log_retrieval, retrieve_documents, gather_nodes_recursively, hyde_vector_retriever
 from settings import logging_startup, vector_store, storage_context
 
 logging_startup()
 app = FastAPI()
 app.mount("/src", StaticFiles(directory="src"), name="src")
-llm = Ollama(model="dolphin-llama3:8b", request_timeout=500, additional_kwargs={"num_ctx": 256_000}, temperature=0.1)
+llm = Ollama(model="llama3", request_timeout=500, additional_kwargs={"num_ctx": 256_000}, temperature=0.1)
 simple_index = VectorStoreIndex.from_vector_store(vector_store, storage_context=storage_context)
 
 origins = [
@@ -114,13 +114,12 @@ def log_final_responses(logging_id, query_str: str, model_resp: str):
 def master_query(query_str: str, logging_id) -> str:
     # sourcery skip: inline-immediately-returned-variable
     log_query(logging_id, query_str=query_str)
-    docs = simple_index.as_retriever(similarity_top_k=20).retrieve(query_str)
+    docs = hyde_vector_retriever.retrieve(query_str)
     log_retrieval(logging_id, docs)
     texts = gather_nodes_recursively(docs)
     answer_content = "<documents>"
     for index, node_list in enumerate(texts.values()):
         _answer_content = f"\n<document {index}:\n"
-        doc = " ".join([node.get_content(metadata_mode=MetadataMode.NONE) for node in node_list])
         for node in node_list:
             _answer_content += f" {node.get_content(metadata_mode=MetadataMode.NONE)}"
 
