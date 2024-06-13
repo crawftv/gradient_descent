@@ -7,16 +7,16 @@ from anthropic import Anthropic
 from bs4 import BeautifulSoup
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from llama_index.core import PromptTemplate
 from llama_index.core import VectorStoreIndex
 from llama_index.core.schema import MetadataMode
+from llama_index.llms.groq import Groq
 from llama_index.llms.ollama import Ollama
 from pydantic import BaseModel
 from starlette.responses import HTMLResponse
 from starlette.staticfiles import StaticFiles
 
 from agent_splitter import get_nodes
-from prompts import accumulated_prompt
+from prompts import claude_prompt, accumulated_prompt
 from scraper import scrape_website
 from search import log_retrieval, retrieve_documents, gather_nodes_recursively, hyde_vector_retriever
 from settings import logging_startup, vector_store, storage_context
@@ -74,27 +74,15 @@ def log_query(logging_id: str, query_str: str):
 @app.post("/query")
 async def query(input: Input) -> dict[str, str]:
     logging_id: str = uuid.uuid4().hex
-    return {"text": master_query(input.text, logging_id)}
+    docs = docs_accumulation(query_str=input.text, logging_id=logging_id)
+    answer = call_model(docs, input.text, logging_id)
+
+    return {"text": answer}
 
 
 @app.post("/vector-query")
 def vector_query(input: Input):
     return retrieve_documents(query_str=input.text)
-
-
-prompt = PromptTemplate(""" You are the world's best recommendation bot designed to answer user questions about food, travel, wine, etc.
-    We have provided you a document to answer a query from an search embedding search.
-    Your job is to determine whether the subject of document answers the query given the proper keywords or topics.
-    if some asks for a red wine rec, only affirm red wines.
-    if some asks about a city make sure the city is correct in the given document.
-    QUERY: {query_str}
-    ------------ Document ------------
-    {doc}
-    ----------------------------------
-    ------------Output format------------
-     Before answering the question, please think about it step-by-step within <thinking></thinking> tags.
-     Then, provide your final answer within <answer>Yes/No</answer> tags.
-    """)
 
 
 def log_filtering_responses(logging_id, query_str: str, model_resp: str):
@@ -111,7 +99,7 @@ def log_final_responses(logging_id, query_str: str, model_resp: str):
                        (logging_id, query_str, model_resp))
 
 
-def master_query(query_str: str, logging_id) -> str:
+def docs_accumulation(query_str: str, logging_id) -> str:
     # sourcery skip: inline-immediately-returned-variable
     log_query(logging_id, query_str=query_str)
     docs = hyde_vector_retriever.retrieve(query_str)
@@ -125,32 +113,57 @@ def master_query(query_str: str, logging_id) -> str:
 
         answer_content += f"{_answer_content}\n</document {index}>"
     answer_content += "\n</documents>"
-    final_prompt = accumulated_prompt.format(
-        query_str=query_str,
-        docs=answer_content
-    )
-    final_response = llm.complete(final_prompt).text
-    # final_response = anthropic_call(final_prompt)
-    log_final_responses(logging_id, final_prompt, final_response)
-    xml = BeautifulSoup(f"<response>{final_response}</response>", 'lxml-xml')
-    return resp.text if (resp := xml.find("answer")) else "I could not find a suitable answer"
+    return answer_content
 
 
-def anthropic_call(text) -> str:
+def anthropic_call(accumulated_docs, user_query, logging_id) -> str:
     client = Anthropic(
         # defaults to os.environ.get("ANTHROPIC_API_KEY")
         api_key=os.getenv("ANTHROPIC_API_KEY"),
     )
     messages = client.messages.create(
         model="claude-3-haiku-20240307",
-        max_tokens=1000,
+        max_tokens=2000,
         temperature=0,
+        system=claude_prompt.format(docs=accumulated_docs),
         messages=[
-            {"role": "user", "content": [{"type": "text", "text": text}]}
+            {"role": "user", "content": [{"type": "text", "text": user_query}]}
         ],
     ).content
-    return " ".join([i.text for i in messages])
+    # final_response = llm.complete(final_prompt).text
+
+    resp = " ".join([i.text for i in messages])
+    log_final_responses(logging_id, f"{accumulated_docs}\n{user_query}", resp)
+    xml = BeautifulSoup(f"<response>{resp}</response>", 'lxml-xml')
+    return resp.text if (resp := xml.find("answer")) else "I could not find a suitable answer"
 
 
-if __name__ == "__main__":
-    master_query("ACtivities in Rome", uuid.uuid4().hex)
+def call_model(accumulated_docs, user_query, logging_id) -> str:
+    groq = Groq(model="mixtral-8x7b-32768", api_key=os.getenv("GROQ_API_KEYc"))
+
+    # Call the complete method with a query
+    resp = groq.complete(accumulated_prompt.format(docs=accumulated_docs, query_str=user_query)).text
+
+    # from groq import Groq
+    #
+    # client = Groq(
+    #     api_key=os.environ.get("GROQ_API_KEY"),
+    # )
+    #
+    # chat_completion = client.chat.completions.create(
+    #     model="llama3-70b-8192",
+    #     messages=[
+    #         {
+    #             "role": "system",
+    #             "content": claude_prompt.format(docs=accumulated_docs),
+    #         },
+    #         {"role": "user", "content": [{"type": "text", "text": user_query}]}
+    #     ],
+    # ).content
+
+    # resp = chat_completion.choices[0].message.content
+
+    # Call the complete method with a query
+    log_final_responses(logging_id, f"{accumulated_docs}\n{user_query}", resp)
+    xml = BeautifulSoup(f"<response>{resp}</response>", 'lxml-xml')
+    return resp.text if (resp := xml.find("answer")) else "I could not find a suitable answer"

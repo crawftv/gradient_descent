@@ -44,7 +44,9 @@ def propositional_splitter(query_str: str):
     Output:""")
     prompt = prompt.format(query_str=query_str)
     resp = Ollama(model="mistral", temperature=0, request_timeout=500, ).complete(prompt)
-    return dirtyjson.loads(resp.text)
+    text = resp.text
+    text = text.replace("\\_", "_")
+    return dirtyjson.loads(text)
 
 
 if __name__ == "__main__":

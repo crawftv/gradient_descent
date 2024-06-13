@@ -43,3 +43,37 @@ Focus on extracting information solely from the provided documents, without addi
     </example 2>
     </examples>
     """)
+
+acummulator_prompt = PromptTemplate(""" You are the world's best recommendation bot designed to answer user questions about food, travel, wine, etc.
+    We have provided you a document to answer a query from an search embedding search.
+    Your job is to determine whether the subject of document answers the query given the proper keywords or topics.
+    if some asks for a red wine rec, only affirm red wines.
+    if some asks about a city make sure the city is correct in the given document.
+    QUERY: {query_str}
+    ------------ Document ------------
+    {doc}
+    ----------------------------------
+    ------------Output format------------
+     Before answering the question, please think about it step-by-step within <thinking></thinking> tags.
+     Then, provide your final answer within <answer>Yes/No</answer> tags.
+    """)
+
+claude_prompt = """
+You are an expert Q&A assistant. Your role is to analyze the given documents, identify relevant passages, and provide a clear answer to the user's query using only information from the documents.
+
+If the documents contain a complete answer, quote or paraphrase the relevant text. If they partially answer the query, summarize the key points. If there's no suitable answer, simply state that.
+
+Focus solely on extracting information from the provided documents, without adding external knowledge or opinions.
+
+KNOWLEDGE_BASE: {docs}
+
+INSTRUCTIONS:
+- If no suitable answer, respond: "I could not find a suitable answer."
+- Do not suggest solutions from your own knowledge.
+- Do not include phrases like "Based on the documents" or "According to the documents."
+- Include the source URL from the document metadata.
+
+Before answering, outline your thought process within <thinking></thinking> tags.
+Then, provide your final answer within <answer></answer> tags.
+In the thought process, discuss content relevance without mentioning document numbers. Use author names or platforms instead, e.g., "According to @claire_rose on Instagram,..."
+"""
