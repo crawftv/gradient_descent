@@ -10,7 +10,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from llama_index.core import VectorStoreIndex
 from llama_index.core.schema import MetadataMode
 from llama_index.llms.groq import Groq
-from llama_index.llms.ollama import Ollama
 from pydantic import BaseModel
 from starlette.responses import HTMLResponse
 from starlette.staticfiles import StaticFiles
@@ -24,7 +23,6 @@ from settings import logging_startup, vector_store, storage_context
 logging_startup()
 app = FastAPI()
 app.mount("/src", StaticFiles(directory="src"), name="src")
-llm = Ollama(model="llama3", request_timeout=500, additional_kwargs={"num_ctx": 256_000}, temperature=0.1)
 simple_index = VectorStoreIndex.from_vector_store(vector_store, storage_context=storage_context)
 
 origins = [
@@ -75,7 +73,7 @@ def log_query(logging_id: str, query_str: str):
 async def query(input: Input) -> dict[str, str]:
     logging_id: str = uuid.uuid4().hex
     docs = docs_accumulation(query_str=input.text, logging_id=logging_id)
-    answer = call_model(docs, input.text, logging_id)
+    answer = anthropic_call(docs, input.text, logging_id)
 
     return {"text": answer}
 
@@ -122,7 +120,7 @@ def anthropic_call(accumulated_docs, user_query, logging_id) -> str:
         api_key=os.getenv("ANTHROPIC_API_KEY"),
     )
     messages = client.messages.create(
-        model="claude-3-haiku-20240307",
+        model="claude-3-5-sonnet-20240620",
         max_tokens=2000,
         temperature=0,
         system=claude_prompt.format(docs=accumulated_docs),
@@ -139,8 +137,8 @@ def anthropic_call(accumulated_docs, user_query, logging_id) -> str:
 
 
 def call_model(accumulated_docs, user_query, logging_id) -> str:
-    groq = Groq(model="mixtral-8x7b-32768", api_key=os.getenv("GROQ_API_KEYc"))
-
+    groq = Groq(model="llama3-8b-8192", api_key=os.getenv("GROQ_API_KEY"))
+    breakpoint()
     # Call the complete method with a query
     resp = groq.complete(accumulated_prompt.format(docs=accumulated_docs, query_str=user_query)).text
 
