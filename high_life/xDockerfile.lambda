@@ -1,0 +1,32 @@
+FROM public.ecr.aws/lambda/python:3.12
+
+
+# Set the working directory in the container
+WORKDIR ${LAMBDA_TASK_ROOT}
+
+RUN dnf install -y  gcc gcc-c++
+
+RUN pip3 install fastapi  \
+    pydantic anthropic lxml bs4 \
+    llama-index-vector-stores-chroma llama-index-llms-groq \
+    llama-index-embeddings-huggingface
+
+ARG ANTHROPIC_API_KEY
+ARG GROQ_API_KEY
+
+ENV ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+ENV GROQ_API_KEY=${GROQ_API_KEY}
+ENV TOKENIZERS_PARALLELISM=false
+ENV TRANSFORMERS_CACHE=${LAMBDA_TASK_ROOT}/embeddings-cache
+# Copy the application files to the working directory
+COPY src/ ${LAMBDA_TASK_ROOT}/src
+COPY api.py ${LAMBDA_TASK_ROOT}/api.py
+COPY prompts.py ${LAMBDA_TASK_ROOT}/prompts.py
+COPY search.py ${LAMBDA_TASK_ROOT}/search.py
+COPY settings.py ${LAMBDA_TASK_ROOT}/settings.py
+RUN mkdir -p ${LAMBDA_TASK_ROOT}/embeddings-cache
+COPY chroma_data/ ${LAMBDA_TASK_ROOT}/chroma_data
+
+RUN ["python", "api.py"]
+
+CMD [ "api.lambda_handler" ]

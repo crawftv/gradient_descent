@@ -1,7 +1,7 @@
+import json
 import os
 import sqlite3
 import uuid
-from urllib.parse import urlparse, urlunparse
 
 from anthropic import Anthropic
 from bs4 import BeautifulSoup
@@ -14,9 +14,7 @@ from pydantic import BaseModel
 from starlette.responses import HTMLResponse
 from starlette.staticfiles import StaticFiles
 
-from agent_splitter import get_nodes
 from prompts import claude_prompt, accumulated_prompt
-from scraper import scrape_website
 from search import log_retrieval, retrieve_documents, gather_nodes_recursively, hyde_vector_retriever
 from settings import logging_startup, vector_store, storage_context
 
@@ -42,21 +40,6 @@ app.add_middleware(
 async def root():
     with open("src/index.html") as f:
         return HTMLResponse(content=f.read(), status_code=200)
-
-
-@app.get("/scrape")
-def scrape_many(parent_url, save_links: bool = False):
-    if save_links:
-        parsed_url = urlparse(parent_url)
-        base_url = urlunparse((parsed_url.scheme, parsed_url.netloc, '', '', '', ''))
-        other_parts = urlunparse(('', '', parsed_url.path, parsed_url.params, parsed_url.query, parsed_url.fragment))
-        scrape_website(parent_url, save_links=True)
-
-
-@app.post("/add_one")
-def scrape_one(url: str):
-    get_nodes(url)
-    return {"message": "Done"}
 
 
 class Input(BaseModel):
@@ -122,7 +105,7 @@ def anthropic_call(accumulated_docs, user_query, logging_id) -> str:
     messages = client.messages.create(
         model="claude-3-5-sonnet-20240620",
         max_tokens=2000,
-        temperature=0,
+        temperature=0.1,
         system=claude_prompt.format(docs=accumulated_docs),
         messages=[
             {"role": "user", "content": [{"type": "text", "text": user_query}]}
@@ -165,3 +148,37 @@ def call_model(accumulated_docs, user_query, logging_id) -> str:
     log_final_responses(logging_id, f"{accumulated_docs}\n{user_query}", resp)
     xml = BeautifulSoup(f"<response>{resp}</response>", 'lxml-xml')
     return resp.text if (resp := xml.find("answer")) else "I could not find a suitable answer"
+
+
+def lambda_handler(event, context):
+    import logging
+
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    # Parse the input from the Lambda event
+    input_text = event["text"]
+    logging_id = uuid.uuid4().hex
+    try:
+        docs = docs_accumulation(query_str=input_text, logging_id=logging_id)
+        logger.info("recieved docs")
+    except:
+        logger.info("failed to reciev docs")
+        return {"statusCode": 500}
+    try:
+        answer = anthropic_call(docs, input_text, logging_id)
+        logger.info("recieved answer")
+    except:
+        logger.info("failed to receive answer")
+        return {"statusCode": 500}
+    # Return the response in the format expected by API Gateway
+    return {
+        'statusCode': 200,
+        'body': json.dumps({"text": answer}),
+        'headers': {
+            'Content-Type': 'application/json'
+        }
+    }
+
+
+if __name__ == "__main__":
+    lambda_handler({"text": "Paris"}, None)
