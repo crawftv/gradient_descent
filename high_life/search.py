@@ -1,4 +1,5 @@
 import functools
+import os
 import sqlite3
 from collections import OrderedDict
 
@@ -7,19 +8,23 @@ from llama_index.core.indices.query.query_transform import HyDEQueryTransform
 from llama_index.core.postprocessor import LLMRerank
 from llama_index.core.schema import BaseNode, NodeWithScore, NodeRelationship
 from llama_index.core.vector_stores.utils import metadata_dict_to_node
+from llama_index.llms.groq import Groq
 
 from settings import vector_store, storage_context, chroma_collection
 
 index = VectorStoreIndex.from_vector_store(vector_store, storage_context=storage_context)
+
 hyde_vector_retriever = index.as_retriever(similarity_top_k=20,
                                            node_postprocessors=[
                                                LLMRerank(
+                                                   llm=Groq(model="llama3-8b-8192", api_key=os.getenv("GROQ_API_KEY")),
                                                    choice_batch_size=5,
                                                    top_n=2,
                                                ),
                                            ],
                                            vector_store_query_mode="hybrid",
                                            query_transform=HyDEQueryTransform(
+                                               llm=Groq(model="llama3-8b-8192", api_key=os.getenv("GROQ_API_KEY")),
                                                include_original=True, )
                                            )
 

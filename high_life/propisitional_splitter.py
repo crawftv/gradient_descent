@@ -1,6 +1,8 @@
+import os
+
 import dirtyjson
 from llama_index.core import PromptTemplate
-from llama_index.llms.ollama import Ollama
+from llama_index.llms.groq import Groq
 
 query_str = """Claire Rose Cliteur on Instagram: "places to explore on your trip to paris | part 1 museums\xa0  1. @museerodinparis\xa0 one of the most charming museums in paris, perfect to explore on a sunlit morning. once rodin’s workshop, the museum now houses a big collection of his works. highly recommend taking a stroll in the gardens after and having a coffee there.  2. @louisvuittonfoundation an LVMH foundation which houses large modern art exhibitions by artists like rothko or basquiat, as well as a rotating permanent collection  3. @palaisdetokyo\xa0 modern art museum that always has several interesting exhibitions going on  4. @fondationcartier  contemporary art museum hosting large scale themed and commissioned exhibitions of famous and emerging artists\xa0  5. @museecarnavalet fascinating museum of the history of paris through millenia which also has an amazing restaurant in the courtyard for summer evenings with friends  6. @palaisgallieramuseedelamode museum hosting fashion exhibitions, must-visit for lovers of fashion history  7. @museeorangerie the famous gem housing monet’s water lilies. if you manage to come at a quieter time, sitting down on the bench and looking at the paintings for a while is such a serene experience\xa0  8. @museebourdelle breathtaking sculpture museum housing the works and studio of antoine bourdelle, a contemporary of rodin  9. @petitpalais_musee museum of fine art which has a vast collection of paintings, remember to check the downstairs as well, and afterwards sit down for a coffee in their beautiful courtyard\xa0  10. @boursedecommerce art space which houses the works and exhibitions part of the pinault collection in paris  and of course the louvre, musee d’orsay and versailles go without saying"""
 
@@ -40,10 +42,11 @@ def propositional_splitter(query_str: str):
     throughout Europe.", "German immigrants exported the custom of the Easter Hare/Rabbit to
     Britain and America.", "The custom of the Easter Hare/Rabbit evolved into the Easter Bunny in
     Britain and America." ]
+    ALWAYS GIVE BACK A JSON LIST
     Input: {query_str}
     Output:""")
     prompt = prompt.format(query_str=query_str)
-    resp = Ollama(model="mistral", temperature=0, request_timeout=500, ).complete(prompt)
+    resp = Groq(model="mixtral-8x7b-32768", api_key=os.getenv("GROQ_API_KEY"), temperature=0.1).complete(prompt)
     text = resp.text
     text = text.replace("\\_", "_")
     return dirtyjson.loads(text)

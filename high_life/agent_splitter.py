@@ -201,8 +201,7 @@ def nodes_from_html(url, chunking_agent_llm=None):
 
 
 if __name__ == "__main__":
-    nodes = nodes_from_html("https://newsletter.monocle.com/t/r-e-tikhurlt-nghdtdhuh-j/")
-    nodes
+    nodes = get_nodes("https://www.instagram.com/reel/C82W2zqt4jl/")
     # for url in tqdm(konfekt_newsletters.konfekt_news_letters):
     #     nodes_from_html(url)
     #

@@ -71,7 +71,6 @@ INSTRUCTIONS:
 - If no suitable answer, respond: "I could not find a suitable answer."
 - Do not suggest solutions from your own knowledge.
 - Do not include phrases like "Based on the documents" or "According to the documents."
-- Include the source URL from the document metadata.
 
 Before answering, outline your thought process within <thinking></thinking> tags.
 Then, provide your final answer within <answer></answer> tags.

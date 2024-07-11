@@ -1,2 +1,0 @@
-web: uvicorn api:app --port=$PORT
-worker: chroma run --port 8000

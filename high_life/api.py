@@ -1,7 +1,8 @@
+import logging
 import os
 import sqlite3
 import uuid
-from urllib.parse import urlparse, urlunparse
+from datetime import datetime
 
 from anthropic import Anthropic
 from bs4 import BeautifulSoup
@@ -10,22 +11,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from llama_index.core import VectorStoreIndex
 from llama_index.core.schema import MetadataMode
 from llama_index.llms.groq import Groq
-from llama_index.llms.ollama import Ollama
 from pydantic import BaseModel
 from starlette.responses import HTMLResponse
 from starlette.staticfiles import StaticFiles
 
-from agent_splitter import get_nodes
 from prompts import claude_prompt, accumulated_prompt
-from scraper import scrape_website
 from search import log_retrieval, retrieve_documents, gather_nodes_recursively, hyde_vector_retriever
 from settings import logging_startup, vector_store, storage_context
 
 logging_startup()
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 app = FastAPI()
 app.mount("/src", StaticFiles(directory="src"), name="src")
-llm = Ollama(model="llama3", request_timeout=500, additional_kwargs={"num_ctx": 256_000}, temperature=0.1)
 simple_index = VectorStoreIndex.from_vector_store(vector_store, storage_context=storage_context)
+logger = logging.getLogger("uvicorn.out")
 
 origins = [
     "http://localhost:8002",
@@ -46,21 +45,6 @@ async def root():
         return HTMLResponse(content=f.read(), status_code=200)
 
 
-@app.get("/scrape")
-def scrape_many(parent_url, save_links: bool = False):
-    if save_links:
-        parsed_url = urlparse(parent_url)
-        base_url = urlunparse((parsed_url.scheme, parsed_url.netloc, '', '', '', ''))
-        other_parts = urlunparse(('', '', parsed_url.path, parsed_url.params, parsed_url.query, parsed_url.fragment))
-        scrape_website(parent_url, save_links=True)
-
-
-@app.post("/add_one")
-def scrape_one(url: str):
-    get_nodes(url)
-    return {"message": "Done"}
-
-
 class Input(BaseModel):
     text: str
 
@@ -75,7 +59,8 @@ def log_query(logging_id: str, query_str: str):
 async def query(input: Input) -> dict[str, str]:
     logging_id: str = uuid.uuid4().hex
     docs = docs_accumulation(query_str=input.text, logging_id=logging_id)
-    answer = call_model(docs, input.text, logging_id)
+    answer = anthropic_call(docs, input.text, logging_id)
+    logger.info(f"{logging_id}:{datetime.utcnow()} - Query finalized")
 
     return {"text": answer}
 
@@ -102,9 +87,12 @@ def log_final_responses(logging_id, query_str: str, model_resp: str):
 def docs_accumulation(query_str: str, logging_id) -> str:
     # sourcery skip: inline-immediately-returned-variable
     log_query(logging_id, query_str=query_str)
+    logger.info(f"{logging_id}:{datetime.utcnow()} - Starting Query")
     docs = hyde_vector_retriever.retrieve(query_str)
+    logger.info(f"{logging_id}:{datetime.utcnow()} - documents retrieved")
     log_retrieval(logging_id, docs)
     texts = gather_nodes_recursively(docs)
+    logger.info(f"{logging_id}:{datetime.utcnow()} - nodes gathered")
     answer_content = "<documents>"
     for index, node_list in enumerate(texts.values()):
         _answer_content = f"\n<document {index}:\n"
@@ -122,9 +110,9 @@ def anthropic_call(accumulated_docs, user_query, logging_id) -> str:
         api_key=os.getenv("ANTHROPIC_API_KEY"),
     )
     messages = client.messages.create(
-        model="claude-3-haiku-20240307",
+        model="claude-3-5-sonnet-20240620",
         max_tokens=2000,
-        temperature=0,
+        temperature=0.1,
         system=claude_prompt.format(docs=accumulated_docs),
         messages=[
             {"role": "user", "content": [{"type": "text", "text": user_query}]}
@@ -139,8 +127,7 @@ def anthropic_call(accumulated_docs, user_query, logging_id) -> str:
 
 
 def call_model(accumulated_docs, user_query, logging_id) -> str:
-    groq = Groq(model="mixtral-8x7b-32768", api_key=os.getenv("GROQ_API_KEYc"))
-
+    groq = Groq(model="llama3-8b-8192", api_key=os.getenv("GROQ_API_KEY"))
     # Call the complete method with a query
     resp = groq.complete(accumulated_prompt.format(docs=accumulated_docs, query_str=user_query)).text
 
@@ -167,3 +154,7 @@ def call_model(accumulated_docs, user_query, logging_id) -> str:
     log_final_responses(logging_id, f"{accumulated_docs}\n{user_query}", resp)
     xml = BeautifulSoup(f"<response>{resp}</response>", 'lxml-xml')
     return resp.text if (resp := xml.find("answer")) else "I could not find a suitable answer"
+
+
+if __name__ == "__main__":
+    lambda_handler({"text": "Paris"}, None)

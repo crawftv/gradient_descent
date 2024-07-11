@@ -5,14 +5,12 @@ import chromadb
 from chromadb.api.models import Collection
 from llama_index.core import StorageContext, Settings, set_global_handler
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
-from llama_index.llms.ollama import Ollama
 from llama_index.vector_stores.chroma import ChromaVectorStore
 
 set_global_handler("simple")  # side effect
 
-Settings.embed_model = HuggingFaceEmbedding("avsolatorio/GIST-large-Embedding-v0")
-Settings.llm = Ollama(model="mistral", temperature=0.1, request_timeout=500.0)
-chroma_client = chromadb.HttpClient(host='localhost', port=8000)
+Settings.embed_model = HuggingFaceEmbedding("avsolatorio/GIST-large-Embedding-v0", cache_folder="embeddings-cache")
+chroma_client = chromadb.PersistentClient(path="./chroma_data")
 chroma_collection: Collection = chroma_client.get_or_create_collection("high_life_3")
 vector_store = ChromaVectorStore(chroma_collection=chroma_collection)
 storage_context = StorageContext.from_defaults(vector_store=vector_store)

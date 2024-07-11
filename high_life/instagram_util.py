@@ -2,11 +2,10 @@ import os
 import re
 import time
 
-import requests
 from bs4 import BeautifulSoup
 from llama_index.core import PromptTemplate
 from llama_index.core.schema import TextNode, NodeRelationship, RelatedNodeInfo, Document
-from llama_index.llms.ollama import Ollama
+from llama_index.llms.groq import Groq
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
@@ -54,13 +53,13 @@ def get_instagram_text(url: str):
 def filter_instagram_by_url(url):
     profile_pattern = r'^https?://(?:www\.)?instagram\.com/([a-zA-Z0-9_\.]+)/?$'
     post_pattern = r'^https?://(?:www\.)?instagram\.com/p/([a-zA-Z0-9_\-]+)/?'
-
+    reel_pattern = r'^https?://(?:www\.)?instagram\.com/(reel)/([a-zA-Z0-9_\-]+)/?'
     profile_match = re.match(profile_pattern, url)
     post_match = re.match(post_pattern, url)
-
+    reel_match = re.match(reel_pattern, url)
     if profile_match:
         return profile_nodes_from_html_file(url)
-    elif post_match:
+    elif post_match or reel_match:
         return nodes_from_instagram(url)
     else:
         return "The URL is not a valid Instagram profile or post URL."
@@ -81,8 +80,8 @@ def profile_nodes_from_html_file(url):
             bio_texts.append(x.text)
     prompt = PromptTemplate(
         "the text provided comes from an instagram bio. Please reconstruct a biographical sentence to be included with other pieces of information as part of a data application:\n{bio_text}")
-    bio = Ollama(model="mistral", temperature=0, request_timeout=500, ).complete(prompt.format(bio_text=bio_texts)).text
-
+    bio = Groq(model="llama3-8b-8192", api_key=os.getenv("GROQ_API_KEY")).complete(
+        prompt.format(bio_text=bio_texts)).text
     body = html.find("header").next_sibling
     new_nodes = []
     texts: list[str] = []
@@ -134,40 +133,34 @@ def profile_nodes_from_html_file(url):
 
 
 def nodes_from_instagram(url):
-    text = requests.get(url).text
-    xml = BeautifulSoup(text, 'lxml-xml')
+    text = get_instagram_text(url)
+    html = BeautifulSoup(text, 'html.parser')
 
-    contents = [i.attrs["content"] for i in xml.find_all("meta") if i.attrs.get("property") == "og:title"]
+    content = [i for i in html.find_all("span") if len(i.text.split(" ")) > 2][0].get_text(" ")
     nodes: list[TextNode] = []
     parent_document = TextNode(
-        text=" ".join(contents),
+        text=" ".join(content),
         metadata={
-            "text_hash": hex_id(contents[0]),
+            "text_hash": hex_id(content),
             "url": url
         })
-    for content in contents:
-        result = list(re.finditer(r"(?P<Title> (?P<author>.*) on Instagram): ", content))[0]
-        title = result.groupdict()["Title"]
-        author = result.groupdict()["author"]
-        propositions = propositional_splitter(content)
-        for proposition in propositions:
-            text_hash = hex_id(proposition)
-            new_node = TextNode(
-                text=proposition,
-                metadata={
-                    "text_hash": text_hash,
-                    "title": title,
-                    "author": author,
-                    "url": url
-                })
-            new_node.excluded_llm_metadata_keys = ["url", "text_hash"]
-            new_node.excluded_embed_metadata_keys = ["url", "text_hash"]
-            new_node.relationships[NodeRelationship.PARENT] = RelatedNodeInfo(node_id=parent_document.node_id)
-            parent_document.relationships[NodeRelationship.CHILD] = RelatedNodeInfo(node_id=new_node.node_id)
-            nodes.append(new_node)
+    propositions = propositional_splitter(content)
+    for proposition in propositions:
+        text_hash = hex_id(proposition)
+        new_node = TextNode(
+            text=proposition,
+            metadata={
+                "text_hash": text_hash,
+                "url": url
+            })
+        new_node.excluded_llm_metadata_keys = ["url", "text_hash"]
+        new_node.excluded_embed_metadata_keys = ["url", "text_hash"]
+        new_node.relationships[NodeRelationship.PARENT] = RelatedNodeInfo(node_id=parent_document.node_id)
+        parent_document.relationships[NodeRelationship.CHILD] = RelatedNodeInfo(node_id=new_node.node_id)
+        nodes.append(new_node)
     nodes.append(parent_document)
     index.insert_nodes(nodes)
 
 
 if __name__ == "__main__":
-    resp = filter_instagram_by_url("https://www.instagram.com/holybellycafe/")
+    resp = filter_instagram_by_url("https://www.instagram.com/einschlawiener/")
