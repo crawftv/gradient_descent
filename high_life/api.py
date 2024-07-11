@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 import sqlite3
@@ -155,36 +154,6 @@ def call_model(accumulated_docs, user_query, logging_id) -> str:
     log_final_responses(logging_id, f"{accumulated_docs}\n{user_query}", resp)
     xml = BeautifulSoup(f"<response>{resp}</response>", 'lxml-xml')
     return resp.text if (resp := xml.find("answer")) else "I could not find a suitable answer"
-
-
-def lambda_handler(event, context):
-    import logging
-
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-    # Parse the input from the Lambda event
-    input_text = event["text"]
-    logging_id = uuid.uuid4().hex
-    try:
-        docs = docs_accumulation(query_str=input_text, logging_id=logging_id)
-        logger.info("recieved docs")
-    except:
-        logger.info("failed to reciev docs")
-        return {"statusCode": 500}
-    try:
-        answer = anthropic_call(docs, input_text, logging_id)
-        logger.info("recieved answer")
-    except:
-        logger.info("failed to receive answer")
-        return {"statusCode": 500}
-    # Return the response in the format expected by API Gateway
-    return {
-        'statusCode': 200,
-        'body': json.dumps({"text": answer}),
-        'headers': {
-            'Content-Type': 'application/json'
-        }
-    }
 
 
 if __name__ == "__main__":
