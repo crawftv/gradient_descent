@@ -1,7 +1,9 @@
 import json
+import logging
 import os
 import sqlite3
 import uuid
+from datetime import datetime
 
 from anthropic import Anthropic
 from bs4 import BeautifulSoup
@@ -19,9 +21,11 @@ from search import log_retrieval, retrieve_documents, gather_nodes_recursively, 
 from settings import logging_startup, vector_store, storage_context
 
 logging_startup()
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 app = FastAPI()
 app.mount("/src", StaticFiles(directory="src"), name="src")
 simple_index = VectorStoreIndex.from_vector_store(vector_store, storage_context=storage_context)
+logger = logging.getLogger("uvicorn.out")
 
 origins = [
     "http://localhost:8002",
@@ -57,6 +61,7 @@ async def query(input: Input) -> dict[str, str]:
     logging_id: str = uuid.uuid4().hex
     docs = docs_accumulation(query_str=input.text, logging_id=logging_id)
     answer = anthropic_call(docs, input.text, logging_id)
+    logger.info(f"{logging_id}:{datetime.utcnow()} - Query finalized")
 
     return {"text": answer}
 
@@ -83,9 +88,12 @@ def log_final_responses(logging_id, query_str: str, model_resp: str):
 def docs_accumulation(query_str: str, logging_id) -> str:
     # sourcery skip: inline-immediately-returned-variable
     log_query(logging_id, query_str=query_str)
+    logger.info(f"{logging_id}:{datetime.utcnow()} - Starting Query")
     docs = hyde_vector_retriever.retrieve(query_str)
+    logger.info(f"{logging_id}:{datetime.utcnow()} - documents retrieved")
     log_retrieval(logging_id, docs)
     texts = gather_nodes_recursively(docs)
+    logger.info(f"{logging_id}:{datetime.utcnow()} - nodes gathered")
     answer_content = "<documents>"
     for index, node_list in enumerate(texts.values()):
         _answer_content = f"\n<document {index}:\n"
@@ -121,7 +129,6 @@ def anthropic_call(accumulated_docs, user_query, logging_id) -> str:
 
 def call_model(accumulated_docs, user_query, logging_id) -> str:
     groq = Groq(model="llama3-8b-8192", api_key=os.getenv("GROQ_API_KEY"))
-    breakpoint()
     # Call the complete method with a query
     resp = groq.complete(accumulated_prompt.format(docs=accumulated_docs, query_str=user_query)).text
 

@@ -12,10 +12,7 @@ COPY search.py /app/search.py
 COPY settings.py /app/settings.py
 COPY chroma_data/ /app/chroma_data
 COPY embeddings-cache /app/embeddings-cache
-
-# Copy the cloudflared startup script
-COPY start_cloudflared.sh /app/start_cloudflared.sh
-RUN chmod +x /app/start_cloudflared.sh
+COPY .cloudflared/ /app/cloudflared
 
 # Install necessary system packages including Python 3 and pip
 RUN apt-get update && apt-get install -y \
@@ -55,27 +52,11 @@ RUN pip3 install --no-cache-dir fastapi chromadb \
     llama-index-vector-stores-chroma llama-index-llms-groq \
     llama-index-embeddings-huggingface
 
-# Set environment variables
-ARG ANTHROPIC_API_KEY
-ARG GROQ_API_KEY
-ARG CLOUDFLARE_TOKEN
-
-ENV ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-ENV GROQ_API_KEY=${GROQ_API_KEY}
-ENV CLOUDFLARE_TOKEN=${CLOUDFLARE_TOKEN}
-
-
-# Expose the necessary port for the FastAPI server
-EXPOSE 8001
-
 # Copy the supervisord configuration file
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Find the path to supervisord
 RUN which supervisord > /supervisord_path.txt
-
-# Install cloudflared service
-RUN cloudflared service install $CLOUDFLARE_TOKEN
 
 # Start supervisord when the container starts
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
