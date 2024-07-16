@@ -1,8 +1,40 @@
-# Use Debian as the base image
-FROM 637423200832.dkr.ecr.us-east-1.amazonaws.com/crawfordc:crawford-base AS high_life_base
+FROM ollama/ollama:0.2.5 AS base_install
+LABEL authors="crawfordcollins"
 
 # Set the working directory in the container
 WORKDIR /app
+
+
+
+RUN apt-get update && apt-get install -y \
+   supervisor \
+    wget \
+    build-essential \
+    libssl-dev \
+    zlib1g-dev \
+    curl \
+    vim \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install a newer version of SQLite
+RUN wget https://www.sqlite.org/2023/sqlite-autoconf-3420000.tar.gz \
+    && tar xvfz sqlite-autoconf-3420000.tar.gz \
+    && cd sqlite-autoconf-3420000 \
+    && ./configure --prefix=/usr/local \
+    && make \
+    && make install \
+    && cd .. \
+    && rm -rf sqlite-autoconf-3420000 sqlite-autoconf-3420000.tar.gz
+
+# Update library path
+ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+
+# Install cloudflared
+RUN curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64.deb \
+    && dpkg -i cloudflared.deb \
+    && rm cloudflared.deb
+
+FROM base_install AS high_life_base
 
 # Copy the application files to the working directory
 COPY src/ /app/src
@@ -27,6 +59,8 @@ RUN pip3 install --no-cache-dir fastapi chromadb \
     llama-index-vector-stores-chroma llama-index-llms-groq \
     llama-index-embeddings-huggingface
 
+RUN pip3 install torch  --index-url https://download.pytorch.org/whl/cu118
+
 # Copy the supervisord configuration file
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
@@ -36,4 +70,5 @@ RUN which supervisord > /supervisord_path.txt
 # RUNTIME STAGE
 FROM high_life_base AS high_life_runtime
 # Start supervisord when the container starts
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+ENTRYPOINT ["/usr/bin/supervisord"]
+CMD ["-c", "/etc/supervisor/conf.d/supervisord.conf"]
