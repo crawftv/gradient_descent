@@ -6,12 +6,18 @@ from datetime import datetime
 
 from anthropic import Anthropic
 from bs4 import BeautifulSoup
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from llama_index.core import VectorStoreIndex
 from llama_index.core.schema import MetadataMode
 from llama_index.llms.groq import Groq
 from pydantic import BaseModel
+from slowapi import _rate_limit_exceeded_handler, Limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
+from starlette import status
+from starlette.requests import Request
 from starlette.responses import HTMLResponse
 from starlette.staticfiles import StaticFiles
 
@@ -38,6 +44,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+security = HTTPBearer()
+
+ADMIN_TOKEN = os.getenv("HIGH_LIFE_ADMIN_TOKEN")
+
+
+def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    if credentials.credentials != ADMIN_TOKEN:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return credentials.credentials
+
+
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
@@ -56,7 +81,8 @@ def log_query(logging_id: str, query_str: str):
 
 
 @app.post("/query")
-async def query(input: Input) -> dict[str, str]:
+@limiter.limit("5/minute")
+async def query(request: Request, input: Input) -> dict[str, str]:
     logging_id: str = uuid.uuid4().hex
     docs = docs_accumulation(query_str=input.text, logging_id=logging_id)
     answer = anthropic_call(docs, input.text, logging_id)
@@ -65,8 +91,9 @@ async def query(input: Input) -> dict[str, str]:
     return {"text": answer}
 
 
+@limiter.limit("5/minute")
 @app.post("/vector-query")
-def vector_query(input: Input):
+def vector_query(request: Request, input: Input):
     return retrieve_documents(query_str=input.text)
 
 
@@ -156,5 +183,29 @@ def call_model(accumulated_docs, user_query, logging_id) -> str:
     return resp.text if (resp := xml.find("answer")) else "I could not find a suitable answer"
 
 
-if __name__ == "__main__":
-    lambda_handler({"text": "Paris"}, None)
+class ScrapeInput(BaseModel):
+    url: str
+
+
+@limiter.limit("5/minute")
+@app.post("/add_one")
+def scrape_one(request: Request, input: ScrapeInput, token: str = Depends(verify_token), ):
+    """add an url to be scraped later"""
+    conn = sqlite3.connect("scraping.db")
+    cursor = conn.cursor()
+
+    # Create the table if it doesn't exist
+    cursor.execute('''
+            CREATE TABLE IF NOT EXISTS urls
+            (url TEXT PRIMARY KEY, complete BOOLEAN)
+        ''')
+
+    # Insert the new URL with complete set to False
+    cursor.execute('''
+            INSERT OR IGNORE INTO urls (url, complete)
+            VALUES (?, ?)
+        ''', (input.url, False))
+
+    conn.commit()
+    conn.close()
+    return {"message": "success"}

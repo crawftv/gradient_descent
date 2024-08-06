@@ -1,20 +1,24 @@
-FROM ollama/ollama:0.2.5 AS base_install
+# Start from the PyTorch base image
+FROM pytorch/pytorch:latest
 LABEL authors="crawfordcollins"
 
 # Set the working directory in the container
-WORKDIR /app
 
-
-
+# Install necessary system packages
 RUN apt-get update && apt-get install -y \
-   supervisor \
+    supervisor \
     wget \
     build-essential \
     libssl-dev \
     zlib1g-dev \
     curl \
     vim \
+    python3 \
+    python3-pip \
+    python3-venv \
+    libseccomp2 \
     && rm -rf /var/lib/apt/lists/*
+
 
 # Install a newer version of SQLite
 RUN wget https://www.sqlite.org/2023/sqlite-autoconf-3420000.tar.gz \
@@ -25,50 +29,40 @@ RUN wget https://www.sqlite.org/2023/sqlite-autoconf-3420000.tar.gz \
     && make install \
     && cd .. \
     && rm -rf sqlite-autoconf-3420000 sqlite-autoconf-3420000.tar.gz
-
-# Update library path
 ENV LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
 
+
 # Install cloudflared
-RUN curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64.deb \
+RUN curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb \
     && dpkg -i cloudflared.deb \
     && rm cloudflared.deb
 
-FROM base_install AS high_life_base
+# Clean up
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+
 
 # Copy the application files to the working directory
+WORKDIR /app
 COPY src/ /app/src
 COPY api.py /app/api.py
 COPY prompts.py /app/prompts.py
+COPY agent_splitter.py /app/agent_splitter.py
+COPY instagram_util.py /app/instagram_util.py
 COPY search.py /app/search.py
 COPY settings.py /app/settings.py
-COPY chroma_data/ /app/chroma_data
 COPY embeddings-cache /app/embeddings-cache
-COPY .cloudflared/ /app/cloudflared
 
-# Install necessary system packages including Python 3 and pip
-RUN apt-get update && apt-get install -y \
-    python3 \
-    python3-pip \
-    python3-venv \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install Uvicorn and Chroma
+# Install Python packages
 RUN pip3 install --no-cache-dir fastapi chromadb \
     pydantic anthropic lxml bs4 \
     llama-index-vector-stores-chroma llama-index-llms-groq \
-    llama-index-embeddings-huggingface
+    llama-index-embeddings-huggingface slowapi
 
-RUN pip3 install torch  --index-url https://download.pytorch.org/whl/cu118
+RUN pip3 install torch --index-url https://download.pytorch.org/whl/cu125
 
 # Copy the supervisord configuration file
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# Find the path to supervisord
-RUN which supervisord > /supervisord_path.txt
-
-# RUNTIME STAGE
-FROM high_life_base AS high_life_runtime
 # Start supervisord when the container starts
 ENTRYPOINT ["/usr/bin/supervisord"]
 CMD ["-c", "/etc/supervisor/conf.d/supervisord.conf"]

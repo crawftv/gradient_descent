@@ -9,16 +9,34 @@ from llama_index.llms.groq import Groq
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.wait import WebDriverWait
 
-from propisitional_splitter import propositional_splitter
+from prompts import propositional_splitter
 from search import index
 from settings import hex_id
 
 
+# selenium 4
+
+
+# def get_instagram_text(url: str):
+#     with sync_playwright() as p:
+#         browser = p.chromium.launch()
+#         login = browser.new_page()
+#         login.goto("https://www.instagram.com/accounts/login/")
+#         login.get_by_label("Phone number, username, or email").fill(os.getenv("INSTAGRAM_USERNAME"))
+#         time.sleep(1)
+#         login.get_by_label("Password").fill(os.getenv("INSTAGRAM_PASSWORD"))
+#         time.sleep(1)
+#         login.get_by_role("button", name="Instagram").click()
+#         page = browser.new_page()
+#         time.sleep(1)
+#         page.goto(url)
+#         return page.content()
+
+
 def get_instagram_text(url: str):
-    # Set up the webdriver (make sure you have the appropriate driver installed)
-    driver = webdriver.Chrome()  # For Chrome, you can use webdriver.Firefox() for Firefox, etc.
+    driver = webdriver.Firefox()
 
     # Navigate to the Instagram login page
     driver.get("https://www.instagram.com/accounts/login/")
@@ -68,7 +86,6 @@ def filter_instagram_by_url(url):
 def profile_nodes_from_html_file(url):
     text = get_instagram_text(url)
     html = BeautifulSoup(text, 'html.parser')
-
     stack = list(html.find("header").children)
     bio_texts = []
     while stack:
@@ -86,7 +103,7 @@ def profile_nodes_from_html_file(url):
     new_nodes = []
     texts: list[str] = []
     while body:
-        image_tags = body.find_all("img")
+        image_tags = html.find_all("img")
         for i in image_tags:
             text = i.get("alt") or ""
             texts.append(text)
@@ -129,7 +146,7 @@ def profile_nodes_from_html_file(url):
     new_nodes.append(parent_document)
     for node in new_nodes:
         index.insert_nodes([node])
-    return "Success"
+    return f"added {len(new_nodes)} nodes"
 
 
 def nodes_from_instagram(url):
@@ -160,7 +177,9 @@ def nodes_from_instagram(url):
         nodes.append(new_node)
     nodes.append(parent_document)
     index.insert_nodes(nodes)
+    return f"added {len(nodes)} nodes"
 
 
 if __name__ == "__main__":
-    resp = filter_instagram_by_url("https://www.instagram.com/einschlawiener/")
+    resp = filter_instagram_by_url("https://www.instagram.com/jjhings/")
+    print(resp)
